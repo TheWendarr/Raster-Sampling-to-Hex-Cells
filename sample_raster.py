@@ -1,15 +1,19 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+
 import os
 import datetime
+import argparse
 import warnings
-from typing import Union, Literal, List, Dict
+from typing import Literal
 
 import numpy as np
-import pandas as pd
 import geopandas as gpd
 import rasterio
 from rasterio import features
 from rasterio.windows import from_bounds
-from shapely.geometry import box
 
 # Suppress specific rasterio warnings
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
@@ -143,49 +147,73 @@ class RasterBinEnricher:
         print("Done.")
 
 
-if __name__ == "__main__":
-    
-    # 1. Define Input/Output
-    INPUT_GEOJSON = "PATH/TO/HEXSURFACE.geojson"
-    OUTPUT_GEOJSON = "PATH/TO/OUTPUT.geojson"
-    
-    # 2. Configure Rasters List
-    # Add as many dictionaries as you need. 
-    # Keys: 'path', 'method' (mean/majority), 'threshold' (0.0 - 1.0)
-    RASTER_CONFIG = [
-        {
-            "path": "path/to/dem_elevation.tif",
-            "method": "mean",
-            "threshold": 0.1
-        },
-        {
-            "path": "path/to/slope_degrees.tif",
-            "method": "mean",
-            "threshold": 0.1
-        },
-        {
-            "path": "path/to/land_use_land_cover.tif",
-            "method": "majority",
-            "threshold": 0.1
-        }
-    ]
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Sample rasters into hex/polygon bins and save enriched GeoJSON."
+    )
+    parser.add_argument(
+        "--in-path",
+        required=True,
+        help="Input hex/polygon GeoJSON path.",
+    )
+    parser.add_argument(
+        "--out-path",
+        required=True,
+        help="Output GeoJSON path.",
+    )
+    parser.add_argument(
+        "--mean",
+        action="append",
+        default=[],
+        help="Raster path to process with MEAN. Use multiple times for multiple rasters.",
+    )
+    parser.add_argument(
+        "--majority",
+        action="append",
+        default=[],
+        help="Raster path to process with MAJORITY. Use multiple times for multiple rasters.",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.1,
+        help="Minimum valid-pixel ratio per polygon (default: 0.1).",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if not args.mean and not args.majority:
+        parser.error("Provide at least one raster via --mean or --majority.")
+
+    if not 0.0 <= args.threshold <= 1.0:
+        parser.error("--threshold must be between 0.0 and 1.0.")
+
+    raster_config = (
+        [{"path": path, "method": "mean", "threshold": args.threshold} for path in args.mean]
+        + [{"path": path, "method": "majority", "threshold": args.threshold} for path in args.majority]
+    )
 
     try:
-        # Initialize the Enricher
-        enricher = RasterBinEnricher(INPUT_GEOJSON)
+        enricher = RasterBinEnricher(args.in_path)
+        print(f"Starting batch process for {len(raster_config)} rasters...")
 
-        # Iterate through the config list
-        print(f"Starting batch process for {len(RASTER_CONFIG)} rasters...")
-        
-        for config in RASTER_CONFIG:
+        for config in raster_config:
             enricher.process_raster(
                 raster_path=config["path"],
                 method=config["method"],
-                nodata_threshold=config.get("threshold", 0.1) # Default to 0.1 if missing
+                nodata_threshold=config["threshold"],
             )
 
-        # Save Final Result
-        enricher.save_geojson(OUTPUT_GEOJSON)
-        
-    except Exception as e:
-        print(f"\nAn error occurred during processing: {e}")
+        enricher.save_geojson(args.out_path)
+        return 0
+    except Exception as exc:
+        print(f"\nAn error occurred during processing: {exc}")
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
