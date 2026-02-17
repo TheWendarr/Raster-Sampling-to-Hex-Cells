@@ -1,0 +1,12 @@
+[project]
+name = "raster-sampling-to-hex-cells"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "geopandas>=1.1.2",
+    "numpy>=2.4.2",
+    "pandas>=3.0.0",
+    "rasterio>=1.4.4",
+]
