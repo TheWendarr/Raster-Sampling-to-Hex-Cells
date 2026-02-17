@@ -14,7 +14,7 @@ python sample_raster.py \
 ```
 
 Create H3 Polygons given input polygon (.geojson)
-# Will add the ability to use any file with extent later instead of limiting to geojson
+Will add the ability to use any file with extent later instead of limiting to geojson
 ```bash
 python generate_h3_tesselation.py \
   --in path/to/bounding/polygon.geojson \
