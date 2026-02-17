@@ -1,7 +1,47 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["geopandas", "numpy", "rasterio"]
-# ///
+"""
+sample_raster.py
+
+Attribute polygon “bins” (e.g., H3 hex/pent cells or any polygon GeoJSON) with raster-derived
+statistics and write the result as GeoJSON.
+
+Purpose
+    This tool samples one or more rasters inside each input polygon and appends the
+    computed value(s) as new attribute fields. It supports:
+      - MEAN     (continuous rasters: DEM, slope, etc.)
+      - MAJORITY (categorical rasters: landcover, soil class, etc.) with tie handling.
+
+Inputs
+    - --in-path (str)
+        Path to input GeoJSON containing polygon features (H3 bins or any polygons).
+    - --mean (str, repeatable)
+        One or more raster paths to summarize with MEAN.
+    - --majority (str, repeatable)
+        One or more raster paths to summarize with MAJORITY.
+    - --threshold (float, default 0.1)
+        Minimum fraction of valid (non-NoData) pixels required within a polygon. If the
+        valid fraction is below this value, the output for that polygon/raster is None.
+
+Processing
+    For each polygon and raster:
+      1) Window the raster to the polygon bounds (fast subset read)
+      2) Rasterize the polygon to a mask using a center-of-pixel rule (all_touched=False)
+      3) Extract pixels under the mask and remove NoData values
+      4) If valid pixel fraction >= threshold, compute MEAN or MAJORITY
+
+Outputs
+    - --out-path (str)
+        Output GeoJSON FeatureCollection containing the original polygons plus:
+          - <rasterName>_mean or <rasterName>_majority columns
+          - meta_version, meta_processed_at, meta_source_<rasterName>
+
+Notes
+    - CRS mismatches are warned (not reprojected). Input polygons and rasters should be
+      in the same CRS for correct results.
+    - MAJORITY ties return a string like "Val1 / Val2".
+
+Dependencies
+    geopandas, rasterio, numpy
+"""
 
 import os
 import datetime
