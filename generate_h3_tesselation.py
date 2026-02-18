@@ -1,25 +1,26 @@
 """
-h3_surface_from_geojson.py
+generate_h3_tesselation.py
 
-Create an H3 "surface" (cell coverage) over a GeoJSON-defined extent.
+Create an H3 "surface" (cell coverage) over a defined extent.
 
 Inputs
-- --in     Path to input GeoJSON (Geometry | Feature | FeatureCollection)
+- --in     Path to input vector file (GeoJSON, Shapefile, or KML)
 - --res    H3 resolution (0..15)
 - --out    Path to output GeoJSON (FeatureCollection of H3 cell polygons)
 
 Output
 - GeoJSON FeatureCollection where each feature is a Polygon representing an H3 cell,
   with properties:
-    - h3_id: str (cell index, e.g., "8928308280fffff")
+    - GRID_ID: str (cell index, e.g., "8928308280fffff")
     - res: int
 
 Requires
-- pip install h3
+- pip install h3 geopandas pyogrio
 
 Notes
-- Handles Polygon and MultiPolygon (and Feature/FeatureCollection wrappers).
-- For FeatureCollection, the output is the union of H3 cells across all polygonal features.
+- Uses GeoPandas to load input as a GeoDataFrame (supports .geojson/.shp/.kml depending on GDAL drivers).
+- Handles Polygon and MultiPolygon geometries.
+- For multi-feature inputs, the output is the union of H3 cells across all polygonal features.
 - Cell boundaries are emitted as GeoJSON Polygons (lon/lat), closed rings.
 """
 
@@ -29,6 +30,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Set, Tuple, Union
 
+import geopandas as gpd  # pip install geopandas pyogrio
 import h3  # pip install h3
 
 
@@ -36,51 +38,50 @@ GeoJSON = Dict[str, Any]
 LonLat = Tuple[float, float]
 
 
-def _load_geojson(path: Path) -> GeoJSON:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        raise RuntimeError(f"Failed to read/parse GeoJSON: {path}\n{e}") from e
-
-
-def _iter_polygon_geometries(obj: GeoJSON) -> Iterable[GeoJSON]:
-    """
-    Yield Polygon/MultiPolygon geometries from a GeoJSON object that may be:
-    - Geometry
-    - Feature
-    - FeatureCollection
-    """
-    t = obj.get("type")
-    if t == "FeatureCollection":
-        for feat in obj.get("features", []) or []:
-            if not isinstance(feat, dict):
-                continue
-            geom = feat.get("geometry")
-            if isinstance(geom, dict):
-                yield from _iter_polygon_geometries(geom)
-        return
-
-    if t == "Feature":
-        geom = obj.get("geometry")
-        if isinstance(geom, dict):
-            yield from _iter_polygon_geometries(geom)
-        return
-
-    # Geometry
-    if t in ("Polygon", "MultiPolygon"):
-        yield obj
-        return
-
-    # Ignore non-polygon geometries (Point/LineString/etc.)
-    return
-
-
 def _validate_res(res: int) -> None:
     if not isinstance(res, int) or not (0 <= res <= 15):
         raise ValueError("H3 resolution must be an integer in [0, 15].")
 
 
-def _cells_from_geometry(geom: dict, res: int) -> set[str]:
+def _iter_polygon_geojson_geometries_from_gdf(gdf: "gpd.GeoDataFrame") -> Iterable[GeoJSON]:
+    """
+    Yield GeoJSON geometry dicts (Polygon/MultiPolygon) from a GeoDataFrame.
+
+    - Reprojects to EPSG:4326 if CRS is defined and not already 4326 (H3 expects lon/lat degrees).
+    - Ignores non-polygon geometries.
+    """
+    if gdf is None:
+        return
+
+    if gdf.empty:
+        return
+
+    if "geometry" not in gdf.columns:
+        return
+
+    # Ensure lon/lat (EPSG:4326) for H3
+    if gdf.crs is not None:
+        try:
+            epsg = gdf.crs.to_epsg()
+        except Exception:
+            epsg = None
+
+        if epsg != 4326:
+            gdf = gdf.to_crs(epsg=4326)
+
+    # GeoSeries.to_json() returns a GeoJSON FeatureCollection (string)
+    # We'll parse and iterate geometries from there.
+    geojson_fc = json.loads(gdf.geometry.to_json())
+    for feat in geojson_fc.get("features", []) or []:
+        geom = feat.get("geometry")
+        if not isinstance(geom, dict):
+            continue
+        gtype = geom.get("type")
+        if gtype in ("Polygon", "MultiPolygon"):
+            yield geom
+
+
+def _cells_from_geometry(geom: GeoJSON, res: int) -> Set[str]:
     """
     Convert a GeoJSON Polygon or MultiPolygon dict into a set of H3 cell IDs (strings).
 
@@ -94,7 +95,6 @@ def _cells_from_geometry(geom: dict, res: int) -> set[str]:
 
     shape = h3.geo_to_h3shape(geom)
     return set(h3.h3shape_to_cells(shape, res=res))
-
 
 
 def _close_ring(ring: List[LonLat]) -> List[LonLat]:
@@ -121,14 +121,17 @@ def _cell_to_geojson_feature(cell_id: str) -> GeoJSON:
     }
 
 
-def build_h3_surface(in_geojson: GeoJSON, res: int) -> GeoJSON:
+def build_h3_surface(gdf: "gpd.GeoDataFrame", res: int) -> GeoJSON:
+    """
+    Build an H3 surface from an in-memory GeoDataFrame.
+    """
     _validate_res(res)
 
-    geoms = list(_iter_polygon_geometries(in_geojson))
+    geoms = list(_iter_polygon_geojson_geometries_from_gdf(gdf))
     if not geoms:
         raise ValueError(
-            "No Polygon/MultiPolygon geometries found in input GeoJSON. "
-            "Provide an extent as Polygon/MultiPolygon (Feature/FeatureCollection ok)."
+            "No Polygon/MultiPolygon geometries found in input dataset. "
+            "Provide polygonal extent features."
         )
 
     cells: Set[str] = set()
@@ -142,9 +145,14 @@ def build_h3_surface(in_geojson: GeoJSON, res: int) -> GeoJSON:
 
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Create an H3 surface (cells as polygons) from a GeoJSON extent."
+        description="Create an H3 surface (cells as polygons) from a vector extent (GeoJSON/Shapefile/KML)."
     )
-    p.add_argument("--in", dest="in_path", required=True, help="Path to input GeoJSON.")
+    p.add_argument(
+        "--in",
+        dest="in_path",
+        required=True,
+        help="Path to input vector file (.geojson/.shp/.kml).",
+    )
     p.add_argument("--res", dest="res", required=True, type=int, help="H3 resolution (0..15).")
     p.add_argument("--out", dest="out_path", required=True, help="Path to output GeoJSON.")
     p.add_argument(
@@ -153,6 +161,12 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
         type=int,
         default=2,
         help="JSON indentation level for output (default: 2).",
+    )
+    p.add_argument(
+        "--layer",
+        dest="layer",
+        default=None,
+        help="Optional: layer name (sometimes needed for KML or multi-layer sources).",
     )
     return p.parse_args(argv)
 
@@ -167,8 +181,10 @@ def main(argv: List[str] | None = None) -> int:
         return 2
 
     try:
-        in_geojson = _load_geojson(in_path)
-        out_geojson = build_h3_surface(in_geojson, args.res)
+        # Load as GeoDataFrame (in-memory)
+        gdf = gpd.read_file(in_path, layer=args.layer) if args.layer else gpd.read_file(in_path)
+
+        out_geojson = build_h3_surface(gdf, args.res)
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(out_geojson, indent=args.indent), encoding="utf-8")
