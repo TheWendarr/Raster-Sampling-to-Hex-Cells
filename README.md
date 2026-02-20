@@ -1,6 +1,16 @@
 # Raster-Sampling-to-Hex-Cells
 An open source way to translate raster data to hexagon cells within the same CRS and extent using Python. Inputs are projected Rasters alongside GeoJSON of your Hex Surface.
 
+# To-Do List:
+- Modify Funtions to pass GeoDataFrames instead of geoJSON
+- Create variables to determine highest priority of data
+- Create pipeline for Flattened Authoritative Model
+- Create method to overwrite lower fidelity / outdated Cells
+
+- Incorporate Separate Repo (fgdb-tools) into workflow for import / export ability
+
+- (Maybe) translate to C to compile a .exe file for quicker processing
+
 ## CLI Usage
 Sample Rasters to Polygons
 ```bash
