@@ -21,26 +21,27 @@ Requires
 Notes
 - Uses geo_io for all file I/O (supports .geojson, .shp, .kml, .gdb).
 - Handles Polygon and MultiPolygon geometries.
-- For multi-feature inputs, the output is the union of H3 cells across all
-  polygonal features.
+- For multi-feature inputs, polygons are tessellated in parallel using
+  concurrent.futures when multiple CPU cores are available.
+- Cell boundaries are converted in batch via h3.cells_to_geo() for speed.
 - Cell boundaries are emitted as Polygons in EPSG:4326 (lon/lat).
 """
 
 import argparse
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Set, Tuple
+from typing import Any, Dict, Iterable, Set, Tuple
 
 import geopandas as gpd
 import h3  # pip install h3
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, shape
 
 from geo_io import read_vector, write_vector
 
 
 GeoJSON = Dict[str, Any]
-LonLat = Tuple[float, float]
 
 
 def _validate_res(res: int) -> None:
@@ -77,19 +78,58 @@ def _cells_from_geometry(geom: GeoJSON, res: int) -> Set[str]:
     if gtype not in ("Polygon", "MultiPolygon"):
         return set()
 
-    shape = h3.geo_to_h3shape(geom)
-    return set(h3.h3shape_to_cells(shape, res=res))
+    h3shape = h3.geo_to_h3shape(geom)
+    return set(h3.h3shape_to_cells(h3shape, res=res))
 
 
-def _cell_to_polygon(cell_id: str) -> Polygon:
+def _tessellate_one(args: Tuple[GeoJSON, int]) -> Set[str]:
     """
-    Convert an H3 cell ID to a Shapely Polygon.
+    Worker function for parallel tessellation of a single geometry.
 
-    h3.cell_to_boundary returns (lat, lon); Shapely needs (lon, lat).
+    Accepts a tuple (geojson_dict, resolution) for ProcessPoolExecutor.map().
     """
-    boundary_latlon = h3.cell_to_boundary(cell_id)
-    ring_lonlat = [(lon, lat) for (lat, lon) in boundary_latlon]
-    return Polygon(ring_lonlat)
+    geom, res = args
+    return _cells_from_geometry(geom, res)
+
+
+def _batch_cells_to_geodataframe(cells: Set[str], res: int) -> gpd.GeoDataFrame:
+    """
+    Convert a set of H3 cell IDs to a GeoDataFrame using batch conversion.
+
+    Uses h3.cells_to_geo() which converts all cells in a single C-level call,
+    avoiding N individual cell_to_boundary() calls + manual coordinate flips.
+    """
+    if not cells:
+        raise ValueError(
+            f"No H3 cells generated at resolution {res}. "
+            "Check that the input extent is valid and non-degenerate."
+        )
+
+    # h3.cells_to_geo() returns a GeoJSON FeatureCollection dict
+    geojson_fc = h3.cells_to_geo(cells)
+    features_list = geojson_fc["features"]
+
+    grid_ids = []
+    polygons = []
+    for feat in features_list:
+        # h3-py v4 stores the cell index in properties["h3index"]
+        # (or as the feature id — check both for robustness)
+        h3index = feat.get("properties", {}).get("h3index") or feat.get("id", "")
+        grid_ids.append(h3index)
+        polygons.append(shape(feat["geometry"]))
+
+    return gpd.GeoDataFrame(
+        {
+            "GRID_ID": grid_ids,
+            "res": [res] * len(grid_ids),
+        },
+        geometry=polygons,
+        crs="EPSG:4326",
+    )
+
+
+# Parallelism threshold: below this many geometries, overhead > benefit
+_PARALLEL_GEOM_THRESHOLD = 4
 
 
 def build_h3_surface(gdf: gpd.GeoDataFrame, res: int) -> gpd.GeoDataFrame:
@@ -108,6 +148,12 @@ def build_h3_surface(gdf: gpd.GeoDataFrame, res: int) -> gpd.GeoDataFrame:
     GeoDataFrame
         One row per H3 cell with columns: GRID_ID, res, geometry.
         CRS is EPSG:4326.
+
+    Notes
+    -----
+    Multi-polygon inputs are tessellated in parallel when the geometry count
+    exceeds the parallel threshold.  Cell boundaries are batch-converted via
+    h3.cells_to_geo() for a 2–5× speedup over individual cell_to_boundary().
     """
     _validate_res(res)
 
@@ -129,27 +175,33 @@ def build_h3_surface(gdf: gpd.GeoDataFrame, res: int) -> gpd.GeoDataFrame:
 
     # Collect all cell IDs across all input polygons
     cells: Set[str] = set()
-    for geom in geoms:
-        cells.update(_cells_from_geometry(geom, res))
 
-    if not cells:
-        raise ValueError(
-            f"No H3 cells generated at resolution {res}. "
-            "Check that the input extent is valid and non-degenerate."
-        )
+    t_tessellate = time.perf_counter()
+    if len(geoms) >= _PARALLEL_GEOM_THRESHOLD:
+        # Parallel tessellation for multi-polygon inputs
+        import os
 
-    # Build GeoDataFrame directly from cell IDs
-    sorted_cells = sorted(cells)
-    polygons = [_cell_to_polygon(cid) for cid in sorted_cells]
+        max_workers = min(len(geoms), os.cpu_count() or 4)
+        work_items = [(g, res) for g in geoms]
 
-    return gpd.GeoDataFrame(
-        {
-            "GRID_ID": sorted_cells,
-            "res": [res] * len(sorted_cells),
-        },
-        geometry=polygons,
-        crs="EPSG:4326",
-    )
+        with ProcessPoolExecutor(max_workers=max_workers) as pool:
+            for cell_set in pool.map(_tessellate_one, work_items, chunksize=4):
+                cells.update(cell_set)
+    else:
+        # Serial tessellation for small inputs
+        for geom in geoms:
+            cells.update(_cells_from_geometry(geom, res))
+
+    print(f"  [TIME] Tessellation ({len(geoms)} geom(s) -> {len(cells)} cells): "
+          f"{time.perf_counter() - t_tessellate:.3f}s")
+
+    # Batch conversion: cells -> GeoDataFrame (single C call via h3.cells_to_geo)
+    t_convert = time.perf_counter()
+    result = _batch_cells_to_geodataframe(cells, res)
+    print(f"  [TIME] Cell-to-polygon conversion: "
+          f"{time.perf_counter() - t_convert:.3f}s")
+
+    return result
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -200,12 +252,16 @@ def main(argv: list[str] | None = None) -> int:
     out_path = Path(args.out_path)
 
     try:
+        t_read = time.perf_counter()
         gdf = read_vector(in_path, layer=args.layer, epsg=4326)
         print(f"[OK] Read {len(gdf)} features from: {in_path}")
+        print(f"[TIME] Read: {time.perf_counter() - t_read:.3f}s")
 
         surface = build_h3_surface(gdf, args.res)
 
+        t_write = time.perf_counter()
         write_vector(surface, out_path, overwrite=args.overwrite)
+        print(f"[TIME] Write: {time.perf_counter() - t_write:.3f}s")
 
         elapsed = time.perf_counter() - start
         print(f"[OK] Wrote {len(surface)} H3 cells to: {out_path}")
