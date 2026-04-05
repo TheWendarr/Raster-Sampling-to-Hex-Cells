@@ -36,7 +36,7 @@ from typing import Any, Dict, Iterable, Set, Tuple
 
 import geopandas as gpd
 import h3  # pip install h3
-from shapely.geometry import Polygon, shape
+from shapely.geometry import Polygon
 
 from geo_io import read_vector, write_vector
 
@@ -92,12 +92,23 @@ def _tessellate_one(args: Tuple[GeoJSON, int]) -> Set[str]:
     return _cells_from_geometry(geom, res)
 
 
-def _batch_cells_to_geodataframe(cells: Set[str], res: int) -> gpd.GeoDataFrame:
+def _cell_to_polygon(cell_id: str) -> Polygon:
     """
-    Convert a set of H3 cell IDs to a GeoDataFrame using batch conversion.
+    Convert an H3 cell ID to a Shapely Polygon.
 
-    Uses h3.cells_to_geo() which converts all cells in a single C-level call,
-    avoiding N individual cell_to_boundary() calls + manual coordinate flips.
+    h3.cell_to_boundary returns (lat, lon); Shapely needs (lon, lat).
+    """
+    boundary_latlon = h3.cell_to_boundary(cell_id)
+    ring_lonlat = [(lon, lat) for (lat, lon) in boundary_latlon]
+    return Polygon(ring_lonlat)
+
+
+def _cells_to_geodataframe(cells: Set[str], res: int) -> gpd.GeoDataFrame:
+    """
+    Convert a set of H3 cell IDs to a GeoDataFrame.
+
+    Sorts cells for deterministic output order, then converts each cell
+    boundary to a Shapely Polygon.
     """
     if not cells:
         raise ValueError(
@@ -105,23 +116,13 @@ def _batch_cells_to_geodataframe(cells: Set[str], res: int) -> gpd.GeoDataFrame:
             "Check that the input extent is valid and non-degenerate."
         )
 
-    # h3.cells_to_geo() returns a GeoJSON FeatureCollection dict
-    geojson_fc = h3.cells_to_geo(cells)
-    features_list = geojson_fc["features"]
-
-    grid_ids = []
-    polygons = []
-    for feat in features_list:
-        # h3-py v4 stores the cell index in properties["h3index"]
-        # (or as the feature id — check both for robustness)
-        h3index = feat.get("properties", {}).get("h3index") or feat.get("id", "")
-        grid_ids.append(h3index)
-        polygons.append(shape(feat["geometry"]))
+    sorted_cells = sorted(cells)
+    polygons = [_cell_to_polygon(cid) for cid in sorted_cells]
 
     return gpd.GeoDataFrame(
         {
-            "GRID_ID": grid_ids,
-            "res": [res] * len(grid_ids),
+            "GRID_ID": sorted_cells,
+            "res": [res] * len(sorted_cells),
         },
         geometry=polygons,
         crs="EPSG:4326",
@@ -195,10 +196,10 @@ def build_h3_surface(gdf: gpd.GeoDataFrame, res: int) -> gpd.GeoDataFrame:
     print(f"  [TIME] Tessellation ({len(geoms)} geom(s) -> {len(cells)} cells): "
           f"{time.perf_counter() - t_tessellate:.3f}s")
 
-    # Batch conversion: cells -> GeoDataFrame (single C call via h3.cells_to_geo)
+    # Convert cells -> GeoDataFrame
     t_convert = time.perf_counter()
-    result = _batch_cells_to_geodataframe(cells, res)
-    print(f"  [TIME] Cell-to-polygon conversion: "
+    result = _cells_to_geodataframe(cells, res)
+    print(f"  [TIME] Cell-to-polygon conversion ({len(cells)} cells): "
           f"{time.perf_counter() - t_convert:.3f}s")
 
     return result
