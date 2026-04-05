@@ -662,6 +662,7 @@ def cmd_commit(args: argparse.Namespace) -> int:
     existing_layers = _gdb_layer_names(target)
     log_entries: List[Dict[str, Any]] = []
 
+    t_commit_start = time.perf_counter()
     surface_path_str = None
 
     if surface_mode:
@@ -721,6 +722,7 @@ def cmd_commit(args: argparse.Namespace) -> int:
             lod = lod_name(res)
             raster_names = [cfg.path.name for cfg in raster_cfgs]
 
+            t_lod = time.perf_counter()
             print(f"── {lod} (resolution {res}) ─────────────────────────────")
             print(f"  Rasters: {', '.join(raster_names)}")
 
@@ -759,6 +761,7 @@ def cmd_commit(args: argparse.Namespace) -> int:
             print(f"  [TIME] FGDB write: {time.perf_counter() - t_write:.3f}s")
             print(f"  [OK] {lod}: {len(merged)} cells, "
                   f"{len(_raster_data_columns(merged))} data fields")
+            print(f"  [TIME] LOD total: {time.perf_counter() - t_lod:.3f}s")
 
             for cfg in raster_cfgs:
                 log_entries.append(
@@ -788,12 +791,15 @@ def cmd_commit(args: argparse.Namespace) -> int:
             raster_paths = [cfg.path for cfg in raster_cfgs]
             raster_names = [cfg.path.name for cfg in raster_cfgs]
 
+            t_lod = time.perf_counter()
             print(f"── {lod} (resolution {res}) ─────────────────────────────")
             print(f"  Rasters: {', '.join(raster_names)}")
 
             # 1. Extract union of raster footprints
+            t_footprint = time.perf_counter()
             print("  Extracting raster footprints...")
             extent = union_raster_footprints(raster_paths)
+            print(f"  [TIME] Footprint extraction: {time.perf_counter() - t_footprint:.3f}s")
 
             # 2. Build H3 surface from the extent
             print(f"  Tessellating at H3 resolution {res}...")
@@ -801,13 +807,16 @@ def cmd_commit(args: argparse.Namespace) -> int:
             print(f"  Generated {len(surface)} H3 cells")
 
             # 3. Sample rasters into the surface
+            t_sample = time.perf_counter()
             result = _process_lod_rasters(surface, raster_cfgs)
+            print(f"  [TIME] Raster sampling: {time.perf_counter() - t_sample:.3f}s")
 
             if result.empty:
                 print(f"  [WARN] No cells with data for {lod} — skipping")
                 continue
 
             # 4. Merge or create the LOD feature class
+            t_merge = time.perf_counter()
             if lod in existing_layers:
                 print(f"  Merging into existing {lod}...")
                 existing_gdf = _read_from_gdb(target, lod)
@@ -817,12 +826,16 @@ def cmd_commit(args: argparse.Namespace) -> int:
                 print(f"  Creating new feature class: {lod}")
                 merged = result
                 action = "create"
+            print(f"  [TIME] Merge/create: {time.perf_counter() - t_merge:.3f}s")
 
             # 5. Write to FGDB
+            t_write = time.perf_counter()
             _write_to_gdb(merged, target, lod)
             existing_layers.add(lod)
+            print(f"  [TIME] FGDB write: {time.perf_counter() - t_write:.3f}s")
             print(f"  [OK] {lod}: {len(merged)} cells, "
                   f"{len(_raster_data_columns(merged))} data fields")
+            print(f"  [TIME] LOD total: {time.perf_counter() - t_lod:.3f}s")
 
             # 6. Record commit log entries
             for cfg in raster_cfgs:
@@ -839,8 +852,11 @@ def cmd_commit(args: argparse.Namespace) -> int:
 
     # Write commit log
     if log_entries:
+        t_log = time.perf_counter()
         _append_log_entries(target, log_entries)
-        print(f"\n[OK] Committed {len(log_entries)} raster(s) to {target.name}")
+        print(f"\n[TIME] Commit log write: {time.perf_counter() - t_log:.3f}s")
+        print(f"[OK] Committed {len(log_entries)} raster(s) to {target.name}")
+        print(f"[TIME] Total commit: {time.perf_counter() - t_commit_start:.3f}s")
     else:
         print("\n[WARN] Nothing was committed.")
         return 1
@@ -980,91 +996,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--surface-layer",
         default=None,
         help="Layer name within the surface file (for FGDB/KML sources).",
-    )
-
-    # info
-    p_info = sub.add_parser(
-        "info",
-        help="Display Surface Model metadata and commit history.",
-    )
-    p_info.add_argument(
-        "--target",
-        required=True,
-        help="Path to the Surface Model .gdb.",
-    )
-
-    return parser
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
-
-    dispatch = {
-        "init": cmd_init,
-        "commit": cmd_commit,
-        "info": cmd_info,
-    }
-
-    handler = dispatch.get(args.command)
-    if handler is None:
-        parser.print_help()
-        return 2
-
-    try:
-        return handler(args)
-    except Exception as e:
-        print(f"[ERROR] {e}", file=sys.stderr)
-        return 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-
-
-# CLI
-
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="build_surface",
-        description="Manage Hex Surface Model FGDBs.",
-    )
-    sub = parser.add_subparsers(dest="command", required=True)
-
-    # init
-    p_init = sub.add_parser(
-        "init",
-        help="Create a new Hex Surface Model FGDB.",
-    )
-    p_init.add_argument(
-        "--target",
-        required=True,
-        help="Path for the new .gdb (must end in .gdb).",
-    )
-    p_init.add_argument(
-        "--overwrite",
-        action="store_true",
-        help="Delete and recreate if the target already exists.",
-    )
-
-    # commit
-    p_commit = sub.add_parser(
-        "commit",
-        help="Commit raster data into an existing Surface Model.",
-    )
-    p_commit.add_argument(
-        "--target",
-        required=True,
-        help="Path to the Surface Model .gdb.",
-    )
-    p_commit.add_argument(
-        "--raster",
-        action="append",
-        required=True,
-        help=(
-            "Raster config as path:method:resolution. Repeatable. "
-            "Example: elevation.tif:mean:9"
-        ),
     )
 
     # info
