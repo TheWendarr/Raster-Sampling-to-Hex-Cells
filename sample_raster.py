@@ -139,19 +139,26 @@ class RasterBinEnricher:
         tie_counts = [] if method == "majority" else None
 
         with rasterio.open(raster_path) as src:
-            # CRS compatibility: error instead of silent mismatch
+            # CRS handling: if CRSs differ, temporarily reproject geometries
+            # to the raster's CRS for accurate spatial sampling. The GeoDataFrame
+            # itself stays in its original CRS.
+            needs_reproject = False
             if self.original_crs is not None and src.crs is not None:
                 if not self.original_crs.equals(src.crs):
-                    raise ValueError(
-                        f"CRS mismatch — Vector: {self.original_crs}, "
-                        f"Raster: {src.crs}. Reproject the input to match "
-                        f"the raster CRS before sampling."
+                    needs_reproject = True
+                    print(
+                        f"  CRS mismatch (Vector: {self.original_crs}, "
+                        f"Raster: {src.crs}) — reprojecting geometries for sampling"
                     )
+
+            if needs_reproject:
+                sample_geoms = self.gdf.geometry.to_crs(src.crs)
+            else:
+                sample_geoms = self.gdf.geometry
 
             nodata_val = src.nodata
 
-            for _, row in self.gdf.iterrows():
-                geom = row.geometry
+            for idx, geom in enumerate(sample_geoms):
 
                 if geom is None or geom.is_empty:
                     results.append(None)
