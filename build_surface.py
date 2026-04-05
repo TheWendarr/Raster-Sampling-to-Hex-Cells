@@ -14,28 +14,47 @@ commit
 
     Supports two modes:
       1. Raster-only (original): tessellate from raster footprints
-         --raster path:method:resolution
+         --raster path:method:resolution[:factor]
 
       2. Pre-built surface: skip tessellation, sample into provided cells
-         --surface path.geojson --raster path:method[:resolution]
+         --surface path.geojson --raster path:method[:factor]
 
 info
     Display model metadata, LOD summary, and commit history.
+
+Factor Schema
+-------------
+    Factor 1 (F1) — Elevation
+    Factor 2 (F2) — Slope
+    Factor 3 (F3) — Vegetation
+    Factor 4 (F4) — Soil
+
+    When a factor tag is provided, the sampled column is renamed from the
+    raster-derived name to F1, F2, F3, or F4. Raw values are stored — no
+    normalization occurs at this stage.
+
+    The commit log records which raster contributed to which factor for
+    full provenance.
 
 Usage:
     # Create a new surface model
     python build_surface.py init --target "path/to/model.gdb"
 
-    # Commit rasters (tessellate from footprints)
+    # Commit rasters with factor tags
     python build_surface.py commit --target "path/to/model.gdb" \\
-        --raster path/to/elevation.tif:mean:9 \\
-        --raster path/to/landcover.tif:majority:9
+        --raster elevation.tif:mean:9:1 \\
+        --raster slope.tif:mean:9:2 \\
+        --raster landcover.tif:majority:9:3 \\
+        --raster soil.tif:majority:9:4
 
-    # Commit rasters using a pre-built H3 surface
+    # Commit without factor tags (legacy; column named after raster)
+    python build_surface.py commit --target "path/to/model.gdb" \\
+        --raster elevation.tif:mean:9
+
+    # Commit using a pre-built H3 surface
     python build_surface.py commit --target "path/to/model.gdb" \\
         --surface path/to/h3_cells.geojson \\
-        --raster path/to/elevation.tif:mean \\
-        --raster path/to/landcover.tif:majority
+        --raster elevation.tif:mean:1
 
     # View model info
     python build_surface.py info --target "path/to/model.gdb"
@@ -49,9 +68,9 @@ Requires:
 import argparse
 import datetime
 import os
+import shutil
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -74,13 +93,26 @@ except ImportError:
     _HAS_PYOGRIO = False
 
 
+# ═══════════════════════════════════════════════════════════════════════════
 # Constants
+# ═══════════════════════════════════════════════════════════════════════════
 
 META_TABLE = "__hex_surface_meta__"
 LOG_TABLE = "__hex_surface_log__"
 MAGIC_ID = "HEX_SURFACE_MODEL"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2  # Bumped for factor tag support
 LOD_PREFIX = "LOD_"
+
+# Factor definitions: number -> human-readable name
+FACTOR_NAMES: Dict[int, str] = {
+    1: "Elevation",
+    2: "Slope",
+    3: "Vegetation",
+    4: "Soil",
+}
+
+# Valid factor numbers
+VALID_FACTORS = frozenset(FACTOR_NAMES.keys())
 
 # Columns that belong to the H3 grid structure, not raster data
 SYSTEM_COLUMNS = frozenset({"GRID_ID", "res", "geometry"})
@@ -94,11 +126,12 @@ META_COLUMN_PREFIX = "meta_"
 
 @dataclass(frozen=True)
 class RasterConfig:
-    """A single raster input with its sampling method and target resolution."""
+    """A single raster input with its sampling method, target resolution, and factor."""
 
     path: Path
-    method: str  # "mean" or "majority"
-    resolution: Optional[int]  # H3 resolution (0..15), None when using --surface
+    method: str                  # "mean" or "majority"
+    resolution: Optional[int]    # H3 resolution (0..15), None when using --surface
+    factor: Optional[int]        # 1-4, or None for untagged (legacy)
 
 
 # LOD Naming
@@ -113,7 +146,7 @@ def parse_lod_name(name: str) -> Optional[int]:
     if not name.startswith(LOD_PREFIX):
         return None
     try:
-        return int(name[len(LOD_PREFIX) :])
+        return int(name[len(LOD_PREFIX):])
     except ValueError:
         return None
 
@@ -133,14 +166,8 @@ def _write_to_gdb(
     gdb_path: Path,
     layer_name: str,
 ) -> None:
-    """
-    Write a GeoDataFrame as a layer in an existing FGDB.
-
-    If the layer already exists, it is overwritten (GDAL OpenFileGDB
-    replaces the layer when writing without append=True).
-    """
+    """Write a GeoDataFrame as a layer in an existing FGDB."""
     _require_pyogrio()
-
     pyogrio.write_dataframe(
         gdf,
         str(gdb_path),
@@ -168,8 +195,7 @@ def _make_meta_gdf(
     Build the metadata GeoDataFrame (single row).
 
     Uses a placeholder Point(0, 0) geometry because FGDB feature classes
-    require a geometry column. The geometry is meaningless; the attributes
-    are what matter.
+    require a geometry column.
     """
     now = created_at or datetime.datetime.now(datetime.timezone.utc).isoformat()
     return gpd.GeoDataFrame(
@@ -190,77 +216,54 @@ def _make_log_entry(
     lod: str,
     cell_count: int,
     action: str,
+    factor: Optional[int] = None,
     source_surface: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build a single commit log row as a dict."""
-    entry = {
+    return {
         "committed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "lod_name": lod,
+        "lod": lod,
         "resolution": resolution,
-        "raster_source": str(raster_path),
         "method": method,
         "cell_count": cell_count,
         "action": action,
+        "raster_source": raster_path,
+        "factor": factor if factor is not None else -1,
+        "factor_name": FACTOR_NAMES.get(factor, "") if factor else "",
+        "source_surface": source_surface or "",
     }
-    if source_surface is not None:
-        entry["surface_source"] = source_surface
-    return entry
-
-
-def _read_log(gdb_path: Path) -> gpd.GeoDataFrame:
-    """Read the commit log table, or return an empty GeoDataFrame if it doesn't exist."""
-    existing = _gdb_layer_names(gdb_path)
-    if LOG_TABLE not in existing:
-        return gpd.GeoDataFrame(
-            columns=[
-                "committed_at",
-                "lod_name",
-                "resolution",
-                "raster_source",
-                "method",
-                "cell_count",
-                "action",
-                "geometry",
-            ],
-            geometry="geometry",
-            crs="EPSG:4326",
-        )
-    return _read_from_gdb(gdb_path, LOG_TABLE)
 
 
 def _append_log_entries(
-    gdb_path: Path, entries: List[Dict[str, Any]]
+    gdb_path: Path,
+    entries: List[Dict[str, Any]],
 ) -> None:
-    """
-    Append commit log entries to the log table.
+    """Append commit log entries to the log table in the FGDB."""
+    if not entries:
+        return
 
-    Reads the existing log, concatenates new entries, and overwrites
-    the table (read-modify-write pattern).
-    """
-    import pandas as pd
-
-    existing_log = _read_log(gdb_path)
-
-    new_rows = gpd.GeoDataFrame(
+    new_log = gpd.GeoDataFrame(
         entries,
         geometry=[Point(0, 0)] * len(entries),
         crs="EPSG:4326",
     )
 
-    updated_log = pd.concat([existing_log, new_rows], ignore_index=True)
-    updated_log = gpd.GeoDataFrame(updated_log, geometry="geometry", crs="EPSG:4326")
+    existing = _gdb_layer_names(gdb_path)
+    if LOG_TABLE in existing:
+        old_log = _read_from_gdb(gdb_path, LOG_TABLE)
+        import pandas as pd
+        combined = gpd.GeoDataFrame(
+            pd.concat([old_log, new_log], ignore_index=True),
+            crs="EPSG:4326",
+        )
+    else:
+        combined = new_log
 
-    _write_to_gdb(updated_log, gdb_path, LOG_TABLE)
+    _write_to_gdb(combined, gdb_path, LOG_TABLE)
 
-
-# Surface Model Validation
 
 def is_surface_model(gdb_path: Path) -> bool:
-    """
-    Check whether a FGDB is tagged as a Hex Surface Model.
-
-    Reads the metadata table and validates the magic identifier.
-    """
+    """Check whether a FGDB is tagged as a Hex Surface Model."""
     if not gdb_path.exists():
         return False
 
@@ -281,12 +284,9 @@ def is_surface_model(gdb_path: Path) -> bool:
 # Raster Footprint Extraction
 
 def raster_footprint(raster_path: Path) -> gpd.GeoDataFrame:
-    """
-    Extract the bounding box of a raster as a single-polygon GeoDataFrame
-    in EPSG:4326.
-    """
+    """Extract the bounding box of a raster as a GeoDataFrame in EPSG:4326."""
     with rasterio.open(str(raster_path)) as src:
-        bounds = src.bounds  # (left, bottom, right, top)
+        bounds = src.bounds
         crs = src.crs
 
     poly = box(bounds.left, bounds.bottom, bounds.right, bounds.top)
@@ -296,7 +296,6 @@ def raster_footprint(raster_path: Path) -> gpd.GeoDataFrame:
         crs=crs,
     )
 
-    # H3 needs EPSG:4326
     if gdf.crs is not None:
         try:
             epsg = gdf.crs.to_epsg()
@@ -309,28 +308,24 @@ def raster_footprint(raster_path: Path) -> gpd.GeoDataFrame:
 
 
 def union_raster_footprints(raster_paths: List[Path]) -> gpd.GeoDataFrame:
-    """
-    Union the bounding boxes of multiple rasters into a single extent polygon.
-
-    All footprints are reprojected to EPSG:4326 before unioning.
-    """
+    """Union the bounding boxes of multiple rasters into a single extent polygon."""
     import pandas as pd
 
     footprints = [raster_footprint(p) for p in raster_paths]
     combined = pd.concat(footprints, ignore_index=True)
     combined = gpd.GeoDataFrame(combined, geometry="geometry", crs="EPSG:4326")
-
-    # Dissolve into a single polygon
     unioned = combined.dissolve()
     return unioned.reset_index(drop=True)
 
 
 # Column Classification & Pruning
 
+# Factor columns are F1, F2, F3, F4
+FACTOR_COLUMNS = frozenset(f"F{i}" for i in VALID_FACTORS)
+
+
 def _raster_data_columns(gdf: gpd.GeoDataFrame) -> List[str]:
-    """
-    Identify columns that contain raster-derived data (not system or metadata).
-    """
+    """Identify columns that contain raster-derived data."""
     return [
         col
         for col in gdf.columns
@@ -339,12 +334,7 @@ def _raster_data_columns(gdf: gpd.GeoDataFrame) -> List[str]:
 
 
 def _strip_meta_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """
-    Remove meta_* columns from a GeoDataFrame.
-
-    Provenance is tracked in the commit log, so per-cell meta columns
-    from RasterBinEnricher are redundant in the LOD feature classes.
-    """
+    """Remove meta_* columns from a GeoDataFrame."""
     meta_cols = [c for c in gdf.columns if c.startswith(META_COLUMN_PREFIX)]
     if meta_cols:
         gdf = gdf.drop(columns=meta_cols)
@@ -352,22 +342,52 @@ def _strip_meta_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 
 def prune_empty_cells(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """
-    Drop rows where ALL raster-derived columns are null.
-
-    Cells that landed entirely in NoData across every sampled raster
-    are removed so we don't store empty hexagons.
-    """
+    """Drop rows where ALL raster-derived columns are null."""
     data_cols = _raster_data_columns(gdf)
     if not data_cols:
         return gdf
 
-    # Keep rows where at least one data column is non-null
     mask = gdf[data_cols].notna().any(axis=1)
     dropped = (~mask).sum()
     if dropped > 0:
         print(f"  Pruned {dropped} empty cell(s) (no raster data)")
     return gdf[mask].reset_index(drop=True)
+
+
+def _rename_sampled_to_factor(
+    gdf: gpd.GeoDataFrame,
+    raster_cfg: RasterConfig,
+) -> gpd.GeoDataFrame:
+    """
+    Rename the raster-sampled column to its factor name (F1, F2, F3, F4).
+
+    After RasterBinEnricher runs, columns are named like:
+        {raster_stem}_{method}  (e.g., "elevation_mean", "landcover_majority")
+
+    If a factor tag was provided, we rename that column to F{n}.
+    If not, we leave it as-is (legacy behavior).
+    """
+    if raster_cfg.factor is None:
+        return gdf
+
+    # Determine what RasterBinEnricher named the column
+    raster_stem = raster_cfg.path.stem
+    sampled_col = f"{raster_stem}_{raster_cfg.method}"
+
+    target_col = f"F{raster_cfg.factor}"
+
+    if sampled_col in gdf.columns:
+        # If target column already exists (from a previous raster in same batch),
+        # the new one overwrites it
+        if target_col in gdf.columns and target_col != sampled_col:
+            gdf = gdf.drop(columns=[target_col])
+        gdf = gdf.rename(columns={sampled_col: target_col})
+    else:
+        # Fallback: look for any new column that wasn't in SYSTEM_COLUMNS
+        # (shouldn't normally reach here, but defensive)
+        print(f"  [WARN] Expected column '{sampled_col}' not found after sampling")
+
+    return gdf
 
 
 # LOD Merge Logic
@@ -387,36 +407,28 @@ def merge_lod(
     """
     crs = new_gdf.crs or existing_gdf.crs
 
-    # Separate geometry from attributes — geometry doesn't play well with
-    # combine_first, so we handle it manually.
     existing_geom = existing_gdf.set_index("GRID_ID")["geometry"]
     new_geom = new_gdf.set_index("GRID_ID")["geometry"]
 
     existing_attrs = existing_gdf.set_index("GRID_ID").drop(columns=["geometry"])
     new_attrs = new_gdf.set_index("GRID_ID").drop(columns=["geometry"])
 
-    # combine_first: caller's non-null values take priority, then fills gaps
-    # from the argument. So new_attrs.combine_first(existing_attrs) means
-    # "use new where available, fill gaps from existing".
     merged_attrs = new_attrs.combine_first(existing_attrs)
 
-    # Geometry merge: new wins, old fills cells not in new data.
     geom_lookup: Dict[str, Any] = {}
     for gid, geom in existing_geom.items():
         geom_lookup[gid] = geom
     for gid, geom in new_geom.items():
-        geom_lookup[gid] = geom  # New overwrites old
+        geom_lookup[gid] = geom
 
     merged_geom = [geom_lookup[gid] for gid in merged_attrs.index]
 
-    # Reconstruct GeoDataFrame
     result = gpd.GeoDataFrame(
         merged_attrs.reset_index(),
         geometry=merged_geom,
         crs=crs,
     )
 
-    # Ensure 'res' is integer (combine_first can promote to float)
     if "res" in result.columns:
         result["res"] = result["res"].astype(int)
 
@@ -430,73 +442,145 @@ def parse_raster_config(config_str: str, surface_mode: bool = False) -> RasterCo
     Parse a raster config string into a RasterConfig.
 
     Formats:
-      - Standard:      path:method:resolution  (e.g., dem.tif:mean:9)
-      - Surface mode:  path:method             (e.g., dem.tif:mean)
+      Standard:      path:method:resolution[:factor]  (e.g., dem.tif:mean:9:1)
+      Surface mode:  path:method[:factor]              (e.g., dem.tif:mean:1)
 
-    In surface mode, resolution is read from the surface's 'res' column
-    instead of being specified per-raster.
+    Factor is optional. When provided (1-4), the sampled column is renamed
+    to F1, F2, F3, or F4 in the output feature class.
     """
     if surface_mode:
-        # path:method (no resolution)
-        parts = config_str.rsplit(":", 1)
-        if len(parts) == 3:
-            # User provided resolution anyway — allow it as override
-            return _parse_standard_config(config_str)
-        if len(parts) != 2:
-            raise ValueError(
-                f"Invalid raster config: '{config_str}'. "
-                "With --surface, expected format: path:method (e.g., dem.tif:mean)"
-            )
-        raw_path, method = parts
-        path = Path(raw_path).expanduser().resolve()
-        if not path.exists():
-            raise FileNotFoundError(f"Raster not found: {path}")
-        method = method.strip().lower()
-        if method not in ("mean", "majority"):
-            raise ValueError(
-                f"Invalid method '{method}' for {path.name}. "
-                "Must be 'mean' or 'majority'."
-            )
-        return RasterConfig(path=path, method=method, resolution=None)
+        return _parse_surface_config(config_str)
     else:
         return _parse_standard_config(config_str)
 
 
 def _parse_standard_config(config_str: str) -> RasterConfig:
-    """Parse a 'path:method:resolution' string into a RasterConfig."""
-    parts = config_str.rsplit(":", 2)
-    if len(parts) != 3:
+    """Parse 'path:method:resolution[:factor]' into a RasterConfig."""
+    parts = config_str.rsplit(":", 3)
+
+    if len(parts) == 4:
+        raw_path, method, raw_res, raw_factor = parts
+        factor = _validate_factor(raw_factor, raw_path)
+    elif len(parts) == 3:
+        raw_path, method, raw_res = parts
+        factor = None
+    else:
         raise ValueError(
             f"Invalid raster config: '{config_str}'. "
-            "Expected format: path:method:resolution (e.g., dem.tif:mean:9)"
+            "Expected format: path:method:resolution[:factor] "
+            "(e.g., dem.tif:mean:9 or dem.tif:mean:9:1)"
         )
 
-    raw_path, method, raw_res = parts
+    path = _validate_path(raw_path)
+    method = _validate_method(method, path.name)
+    res = _validate_resolution(raw_res, path.name)
 
+    return RasterConfig(path=path, method=method, resolution=res, factor=factor)
+
+
+def _parse_surface_config(config_str: str) -> RasterConfig:
+    """Parse 'path:method[:factor]' (surface mode) into a RasterConfig."""
+    parts = config_str.rsplit(":", 3)
+
+    # Could be path:method:factor, path:method:resolution:factor,
+    # path:method:resolution, or path:method
+    if len(parts) == 4:
+        # path:method:resolution:factor (user provided resolution + factor)
+        raw_path, method, raw_res, raw_factor = parts
+        path = _validate_path(raw_path)
+        method = _validate_method(method, path.name)
+        res = _validate_resolution(raw_res, path.name)
+        factor = _validate_factor(raw_factor, raw_path)
+        return RasterConfig(path=path, method=method, resolution=res, factor=factor)
+    elif len(parts) == 3:
+        raw_path, method, raw_third = parts
+        path = _validate_path(raw_path)
+        method = _validate_method(method, path.name)
+
+        # Disambiguate: is the third part a resolution or a factor?
+        # Factors are 1-4; resolutions are 0-15.
+        # If it's 1-4, prefer interpreting as factor in surface mode.
+        try:
+            val = int(raw_third.strip())
+        except ValueError:
+            raise ValueError(
+                f"Invalid config: '{config_str}'. Third component "
+                f"'{raw_third}' is not a valid integer."
+            )
+
+        if 1 <= val <= 4:
+            # Treat as factor in surface mode
+            return RasterConfig(path=path, method=method, resolution=None, factor=val)
+        elif 0 <= val <= 15:
+            # Treat as resolution
+            return RasterConfig(path=path, method=method, resolution=val, factor=None)
+        else:
+            raise ValueError(
+                f"Invalid config: '{config_str}'. "
+                f"Third component '{val}' is not a valid resolution (0-15) or factor (1-4)."
+            )
+    elif len(parts) == 2:
+        raw_path, method = parts
+        path = _validate_path(raw_path)
+        method = _validate_method(method, path.name)
+        return RasterConfig(path=path, method=method, resolution=None, factor=None)
+    else:
+        raise ValueError(
+            f"Invalid raster config: '{config_str}'. "
+            "With --surface, expected: path:method[:factor] (e.g., dem.tif:mean:1)"
+        )
+
+
+def _validate_path(raw_path: str) -> Path:
+    """Validate and resolve a raster file path."""
     path = Path(raw_path).expanduser().resolve()
     if not path.exists():
         raise FileNotFoundError(f"Raster not found: {path}")
+    return path
 
+
+def _validate_method(method: str, filename: str) -> str:
+    """Validate the sampling method."""
     method = method.strip().lower()
     if method not in ("mean", "majority"):
         raise ValueError(
-            f"Invalid method '{method}' for {path.name}. "
+            f"Invalid method '{method}' for {filename}. "
             "Must be 'mean' or 'majority'."
         )
+    return method
 
+
+def _validate_resolution(raw_res: str, filename: str) -> int:
+    """Validate the H3 resolution."""
     try:
         res = int(raw_res.strip())
     except ValueError:
         raise ValueError(
-            f"Invalid resolution '{raw_res}' for {path.name}. "
+            f"Invalid resolution '{raw_res}' for {filename}. "
             "Must be an integer 0..15."
         )
     if not (0 <= res <= 15):
         raise ValueError(
-            f"Resolution {res} out of range for {path.name}. Must be 0..15."
+            f"Resolution {res} out of range for {filename}. Must be 0..15."
         )
+    return res
 
-    return RasterConfig(path=path, method=method, resolution=res)
+
+def _validate_factor(raw_factor: str, filename: str) -> int:
+    """Validate a factor tag."""
+    try:
+        factor = int(raw_factor.strip())
+    except ValueError:
+        raise ValueError(
+            f"Invalid factor '{raw_factor}' for {filename}. "
+            "Must be an integer 1-4."
+        )
+    if factor not in VALID_FACTORS:
+        raise ValueError(
+            f"Factor {factor} out of range for {filename}. "
+            f"Must be 1-4: {', '.join(f'{k}={v}' for k, v in FACTOR_NAMES.items())}"
+        )
+    return factor
 
 
 def group_by_resolution(
@@ -516,24 +600,7 @@ def load_surface(
     surface_path: Path,
     layer: Optional[str] = None,
 ) -> Dict[int, gpd.GeoDataFrame]:
-    """
-    Load a pre-built H3 surface and group by resolution.
-
-    The surface must have 'GRID_ID' and 'res' columns. Returns a dict
-    mapping resolution -> GeoDataFrame subset.
-
-    Parameters
-    ----------
-    surface_path : Path
-        Path to vector file containing the H3 surface.
-    layer : str, optional
-        Layer name for multi-layer sources.
-
-    Returns
-    -------
-    dict[int, GeoDataFrame]
-        Resolution -> subset of the surface at that resolution.
-    """
+    """Load a pre-built H3 surface and group by resolution."""
     gdf = read_vector(surface_path, layer=layer, epsg=4326)
 
     if "GRID_ID" not in gdf.columns:
@@ -547,7 +614,6 @@ def load_surface(
             f"Found columns: {list(gdf.columns)}"
         )
 
-    # Group by resolution
     groups: Dict[int, gpd.GeoDataFrame] = {}
     for res_val, subset in gdf.groupby("res"):
         groups[int(res_val)] = subset.reset_index(drop=True)
@@ -564,11 +630,14 @@ def _process_lod_rasters(
     """
     Sample all rasters for a single LOD into the provided surface.
 
-    This is the hot path — enriches one surface with N rasters.
+    If factor tags are present, renames sampled columns to F1-F4.
     Returns the enriched, pruned GeoDataFrame (no meta columns).
     """
     enricher = RasterBinEnricher(surface)
+
     for cfg in raster_cfgs:
+        print(f"  Sampling: {cfg.path.name} ({cfg.method})"
+              + (f" -> F{cfg.factor} ({FACTOR_NAMES[cfg.factor]})" if cfg.factor else ""))
         enricher.process_raster(
             raster_path=str(cfg.path),
             method=cfg.method,
@@ -576,6 +645,11 @@ def _process_lod_rasters(
 
     result = enricher.result
     result = _strip_meta_columns(result)
+
+    # Rename sampled columns to factor names where tagged
+    for cfg in raster_cfgs:
+        result = _rename_sampled_to_factor(result, cfg)
+
     result = prune_empty_cells(result)
     return result
 
@@ -600,12 +674,9 @@ def cmd_init(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 2
-        import shutil
-
         shutil.rmtree(target)
         print(f"  Removed existing: {target}")
 
-    # Create the FGDB by writing the metadata table
     target.parent.mkdir(parents=True, exist_ok=True)
     meta_gdf = _make_meta_gdf()
 
@@ -629,7 +700,6 @@ def cmd_commit(args: argparse.Namespace) -> int:
 
     target = Path(args.target).expanduser().resolve()
 
-    # Validate target
     if not target.exists():
         print(
             f"[ERROR] FGDB not found: {target}\n"
@@ -646,9 +716,8 @@ def cmd_commit(args: argparse.Namespace) -> int:
         )
         return 2
 
-    # Parse raster configs
     if not args.raster:
-        print("[ERROR] Provide at least one --raster path:method:resolution.", file=sys.stderr)
+        print("[ERROR] Provide at least one --raster.", file=sys.stderr)
         return 2
 
     surface_mode = args.surface is not None
@@ -659,215 +728,220 @@ def cmd_commit(args: argparse.Namespace) -> int:
         print(f"[ERROR] {e}", file=sys.stderr)
         return 2
 
+    # Validate: no duplicate factors within the same LOD
+    _check_factor_conflicts(configs)
+
     existing_layers = _gdb_layer_names(target)
     log_entries: List[Dict[str, Any]] = []
-
-    t_commit_start = time.perf_counter()
     surface_path_str = None
 
     if surface_mode:
-        # ── Pre-built surface mode ───────────────────────────────────
-        surface_path = Path(args.surface).expanduser().resolve()
-        surface_path_str = str(surface_path)
+        return _commit_surface_mode(
+            args, target, configs, existing_layers, log_entries
+        )
+    else:
+        return _commit_standard_mode(
+            target, configs, existing_layers, log_entries
+        )
 
-        if not surface_path.exists():
-            print(f"[ERROR] Surface file not found: {surface_path}", file=sys.stderr)
+
+def _check_factor_conflicts(configs: List[RasterConfig]) -> None:
+    """Warn if multiple rasters target the same factor at the same resolution."""
+    seen: Dict[Tuple[Optional[int], Optional[int]], str] = {}
+    for cfg in configs:
+        if cfg.factor is not None:
+            key = (cfg.resolution, cfg.factor)
+            if key in seen:
+                print(
+                    f"  [WARN] Multiple rasters target F{cfg.factor} at resolution "
+                    f"{cfg.resolution}: {seen[key]} and {cfg.path.name}. "
+                    f"Last-write-wins: {cfg.path.name} will overwrite."
+                )
+            seen[key] = cfg.path.name
+
+
+def _commit_standard_mode(
+    target: Path,
+    configs: List[RasterConfig],
+    existing_layers: Set[str],
+    log_entries: List[Dict[str, Any]],
+) -> int:
+    """Standard commit: tessellate from raster footprints."""
+    resolution_groups = group_by_resolution(configs)
+
+    print(f"Target: {target}")
+    print(
+        f"Committing {len(configs)} raster(s) across "
+        f"{len(resolution_groups)} LOD(s)\n"
+    )
+
+    for res, raster_cfgs in sorted(resolution_groups.items()):
+        lod = lod_name(res)
+        raster_paths = [cfg.path for cfg in raster_cfgs]
+        raster_names = [cfg.path.name for cfg in raster_cfgs]
+
+        print(f"── {lod} (resolution {res}) ─────────────────────────────")
+        print(f"  Rasters: {', '.join(raster_names)}")
+
+        t_lod = time.perf_counter()
+
+        # 1. Extract union of raster footprints
+        print("  Extracting raster footprints...")
+        extent = union_raster_footprints(raster_paths)
+
+        # 2. Build H3 surface from the extent
+        print(f"  Tessellating at H3 resolution {res}...")
+        surface = build_h3_surface(extent, res)
+        print(f"  Generated {len(surface)} H3 cells")
+
+        # 3. Sample rasters + rename to factor columns
+        result = _process_lod_rasters(surface, raster_cfgs)
+
+        if result.empty:
+            print(f"  [WARN] No cells with data for {lod} — skipping")
+            continue
+
+        # 4. Merge or create the LOD feature class
+        if lod in existing_layers:
+            print(f"  Merging into existing {lod}...")
+            existing_gdf = _read_from_gdb(target, lod)
+            merged = merge_lod(existing_gdf, result)
+            action = "merge"
+        else:
+            print(f"  Creating new feature class: {lod}")
+            merged = result
+            action = "create"
+
+        # 5. Write to FGDB
+        _write_to_gdb(merged, target, lod)
+        existing_layers.add(lod)
+
+        elapsed = time.perf_counter() - t_lod
+        print(f"  [OK] {lod}: {len(merged)} cells, "
+              f"{len(_raster_data_columns(merged))} data fields ({elapsed:.2f}s)")
+
+        # 6. Record commit log entries
+        for cfg in raster_cfgs:
+            log_entries.append(
+                _make_log_entry(
+                    raster_path=str(cfg.path),
+                    method=cfg.method,
+                    resolution=res,
+                    lod=lod,
+                    cell_count=len(merged),
+                    action=action,
+                    factor=cfg.factor,
+                )
+            )
+
+    _append_log_entries(target, log_entries)
+    print(f"\n[OK] Committed {len(log_entries)} raster(s) to {target.name}")
+    return 0
+
+
+def _commit_surface_mode(
+    args: argparse.Namespace,
+    target: Path,
+    configs: List[RasterConfig],
+    existing_layers: Set[str],
+    log_entries: List[Dict[str, Any]],
+) -> int:
+    """Surface mode: skip tessellation, sample into pre-built cells."""
+    surface_path = Path(args.surface).expanduser().resolve()
+
+    if not surface_path.exists():
+        print(f"[ERROR] Surface file not found: {surface_path}", file=sys.stderr)
+        return 2
+
+    print(f"Loading pre-built surface: {surface_path}")
+    surface_groups = load_surface(surface_path, layer=args.surface_layer)
+
+    resolutions_in_surface = sorted(surface_groups.keys())
+    total_cells = sum(len(g) for g in surface_groups.values())
+    print(f"Surface contains {total_cells} cells across "
+          f"{len(resolutions_in_surface)} resolution(s): {resolutions_in_surface}")
+
+    # Assign resolution to configs that don't have one
+    if len(resolutions_in_surface) == 1:
+        res = resolutions_in_surface[0]
+        configs = [
+            RasterConfig(path=c.path, method=c.method,
+                         resolution=c.resolution or res, factor=c.factor)
+            for c in configs
+        ]
+    else:
+        unresolved = [c for c in configs if c.resolution is None]
+        if unresolved:
+            print(
+                f"[ERROR] Surface has multiple resolutions {resolutions_in_surface}. "
+                "Each raster must specify a resolution.",
+                file=sys.stderr,
+            )
             return 2
 
-        print(f"Loading pre-built surface: {surface_path}")
-        t_load_surface = time.perf_counter()
-        surface_groups = load_surface(surface_path, layer=args.surface_layer)
-        print(f"[TIME] Load surface: {time.perf_counter() - t_load_surface:.3f}s")
+    resolution_groups = group_by_resolution(configs)
 
-        resolutions_in_surface = sorted(surface_groups.keys())
-        print(f"Surface contains {sum(len(g) for g in surface_groups.values())} cells "
-              f"across {len(resolutions_in_surface)} resolution(s): {resolutions_in_surface}")
+    print(f"Target: {target}")
+    print(f"Committing {len(configs)} raster(s)\n")
 
-        # Assign resolution to raster configs that don't have one
-        if len(resolutions_in_surface) == 1:
-            res = resolutions_in_surface[0]
-            resolved_configs = []
-            for cfg in configs:
-                if cfg.resolution is None:
-                    resolved_configs.append(
-                        RasterConfig(path=cfg.path, method=cfg.method, resolution=res)
-                    )
-                else:
-                    resolved_configs.append(cfg)
-            configs = resolved_configs
+    for res, raster_cfgs in sorted(resolution_groups.items()):
+        lod = lod_name(res)
+        if res not in surface_groups:
+            print(f"  [WARN] No surface cells at resolution {res} — skipping")
+            continue
+
+        print(f"── {lod} (resolution {res}) ─────────────────────────────")
+
+        t_lod = time.perf_counter()
+        surface = surface_groups[res]
+        print(f"  Using {len(surface)} pre-built H3 cells")
+
+        result = _process_lod_rasters(surface, raster_cfgs)
+
+        if result.empty:
+            print(f"  [WARN] No cells with data for {lod} — skipping")
+            continue
+
+        if lod in existing_layers:
+            print(f"  Merging into existing {lod}...")
+            existing_gdf = _read_from_gdb(target, lod)
+            merged = merge_lod(existing_gdf, result)
+            action = "merge"
         else:
-            # Multiple resolutions in surface — rasters without explicit
-            # resolution are applied to ALL resolutions
-            resolved_configs = []
-            for cfg in configs:
-                if cfg.resolution is None:
-                    for res in resolutions_in_surface:
-                        resolved_configs.append(
-                            RasterConfig(path=cfg.path, method=cfg.method, resolution=res)
-                        )
-                else:
-                    resolved_configs.append(cfg)
-            configs = resolved_configs
+            print(f"  Creating new feature class: {lod}")
+            merged = result
+            action = "create"
 
-        resolution_groups = group_by_resolution(configs)
+        _write_to_gdb(merged, target, lod)
+        existing_layers.add(lod)
 
-        print(
-            f"\nTarget: {target}"
-            f"\nCommitting {len(configs)} raster(s) across "
-            f"{len(resolution_groups)} LOD(s) (surface mode)\n"
-        )
+        elapsed = time.perf_counter() - t_lod
+        print(f"  [OK] {lod}: {len(merged)} cells, "
+              f"{len(_raster_data_columns(merged))} data fields ({elapsed:.2f}s)")
 
-        # Process each resolution group using the pre-built surface
-        for res, raster_cfgs in sorted(resolution_groups.items()):
-            lod = lod_name(res)
-            raster_names = [cfg.path.name for cfg in raster_cfgs]
-
-            t_lod = time.perf_counter()
-            print(f"── {lod} (resolution {res}) ─────────────────────────────")
-            print(f"  Rasters: {', '.join(raster_names)}")
-
-            if res not in surface_groups:
-                print(f"  [WARN] Resolution {res} not in surface — skipping")
-                continue
-
-            surface = surface_groups[res]
-            print(f"  Using {len(surface)} pre-built H3 cells")
-
-            # Sample rasters into the surface
-            t_sample = time.perf_counter()
-            result = _process_lod_rasters(surface, raster_cfgs)
-            print(f"  [TIME] Raster sampling: {time.perf_counter() - t_sample:.3f}s")
-
-            if result.empty:
-                print(f"  [WARN] No cells with data for {lod} — skipping")
-                continue
-
-            # Merge or create the LOD feature class
-            t_merge = time.perf_counter()
-            if lod in existing_layers:
-                print(f"  Merging into existing {lod}...")
-                existing_gdf = _read_from_gdb(target, lod)
-                merged = merge_lod(existing_gdf, result)
-                action = "merge"
-            else:
-                print(f"  Creating new feature class: {lod}")
-                merged = result
-                action = "create"
-            print(f"  [TIME] Merge/create: {time.perf_counter() - t_merge:.3f}s")
-
-            t_write = time.perf_counter()
-            _write_to_gdb(merged, target, lod)
-            existing_layers.add(lod)
-            print(f"  [TIME] FGDB write: {time.perf_counter() - t_write:.3f}s")
-            print(f"  [OK] {lod}: {len(merged)} cells, "
-                  f"{len(_raster_data_columns(merged))} data fields")
-            print(f"  [TIME] LOD total: {time.perf_counter() - t_lod:.3f}s")
-
-            for cfg in raster_cfgs:
-                log_entries.append(
-                    _make_log_entry(
-                        raster_path=str(cfg.path),
-                        method=cfg.method,
-                        resolution=res,
-                        lod=lod,
-                        cell_count=len(merged),
-                        action=action,
-                        source_surface=surface_path_str,
-                    )
+        for cfg in raster_cfgs:
+            log_entries.append(
+                _make_log_entry(
+                    raster_path=str(cfg.path),
+                    method=cfg.method,
+                    resolution=res,
+                    lod=lod,
+                    cell_count=len(merged),
+                    action=action,
+                    factor=cfg.factor,
+                    source_surface=str(surface_path),
                 )
+            )
 
-    else:
-        # ── Standard mode (tessellate from raster footprints) ────────
-        resolution_groups = group_by_resolution(configs)
-
-        print(f"Target: {target}")
-        print(
-            f"Committing {len(configs)} raster(s) across "
-            f"{len(resolution_groups)} LOD(s)\n"
-        )
-
-        for res, raster_cfgs in sorted(resolution_groups.items()):
-            lod = lod_name(res)
-            raster_paths = [cfg.path for cfg in raster_cfgs]
-            raster_names = [cfg.path.name for cfg in raster_cfgs]
-
-            t_lod = time.perf_counter()
-            print(f"── {lod} (resolution {res}) ─────────────────────────────")
-            print(f"  Rasters: {', '.join(raster_names)}")
-
-            # 1. Extract union of raster footprints
-            t_footprint = time.perf_counter()
-            print("  Extracting raster footprints...")
-            extent = union_raster_footprints(raster_paths)
-            print(f"  [TIME] Footprint extraction: {time.perf_counter() - t_footprint:.3f}s")
-
-            # 2. Build H3 surface from the extent
-            print(f"  Tessellating at H3 resolution {res}...")
-            surface = build_h3_surface(extent, res)
-            print(f"  Generated {len(surface)} H3 cells")
-
-            # 3. Sample rasters into the surface
-            t_sample = time.perf_counter()
-            result = _process_lod_rasters(surface, raster_cfgs)
-            print(f"  [TIME] Raster sampling: {time.perf_counter() - t_sample:.3f}s")
-
-            if result.empty:
-                print(f"  [WARN] No cells with data for {lod} — skipping")
-                continue
-
-            # 4. Merge or create the LOD feature class
-            t_merge = time.perf_counter()
-            if lod in existing_layers:
-                print(f"  Merging into existing {lod}...")
-                existing_gdf = _read_from_gdb(target, lod)
-                merged = merge_lod(existing_gdf, result)
-                action = "merge"
-            else:
-                print(f"  Creating new feature class: {lod}")
-                merged = result
-                action = "create"
-            print(f"  [TIME] Merge/create: {time.perf_counter() - t_merge:.3f}s")
-
-            # 5. Write to FGDB
-            t_write = time.perf_counter()
-            _write_to_gdb(merged, target, lod)
-            existing_layers.add(lod)
-            print(f"  [TIME] FGDB write: {time.perf_counter() - t_write:.3f}s")
-            print(f"  [OK] {lod}: {len(merged)} cells, "
-                  f"{len(_raster_data_columns(merged))} data fields")
-            print(f"  [TIME] LOD total: {time.perf_counter() - t_lod:.3f}s")
-
-            # 6. Record commit log entries
-            for cfg in raster_cfgs:
-                log_entries.append(
-                    _make_log_entry(
-                        raster_path=str(cfg.path),
-                        method=cfg.method,
-                        resolution=res,
-                        lod=lod,
-                        cell_count=len(merged),
-                        action=action,
-                    )
-                )
-
-    # Write commit log
-    if log_entries:
-        t_log = time.perf_counter()
-        _append_log_entries(target, log_entries)
-        print(f"\n[TIME] Commit log write: {time.perf_counter() - t_log:.3f}s")
-        print(f"[OK] Committed {len(log_entries)} raster(s) to {target.name}")
-        print(f"[TIME] Total commit: {time.perf_counter() - t_commit_start:.3f}s")
-    else:
-        print("\n[WARN] Nothing was committed.")
-        return 1
-
+    _append_log_entries(target, log_entries)
+    print(f"\n[OK] Committed {len(log_entries)} raster(s) to {target.name}")
     return 0
 
 
 # Subcommand: info
 
 def cmd_info(args: argparse.Namespace) -> int:
-    """Display Hex Surface Model metadata and commit history."""
+    """Display Surface Model metadata and commit history."""
     target = Path(args.target).expanduser().resolve()
 
     if not target.exists():
@@ -878,60 +952,70 @@ def cmd_info(args: argparse.Namespace) -> int:
         print(f"[ERROR] {target.name} is not a Hex Surface Model.", file=sys.stderr)
         return 2
 
-    # Model header
     meta_gdf = _read_from_gdb(target, META_TABLE)
-    meta = meta_gdf.iloc[0]
-    created = meta.get("created_at", "unknown")
-    version = meta.get("schema_version", "unknown")
+    row = meta_gdf.iloc[0]
 
-    print(f"\nHex Surface Model: {target}")
-    print(f"Created:           {created}")
-    print(f"Schema version:    {version}")
+    print(f"Hex Surface Model: {target.name}")
+    print(f"Created:           {row.get('created_at', 'N/A')}")
+    print(f"Schema version:    {row.get('schema_version', 'N/A')}")
+    print()
 
-    # LOD feature classes
-    all_layers = list_layers(target)
-    lod_layers = []
-    for rec in all_layers:
-        name = rec.get("name", "")
-        res = parse_lod_name(name)
-        if res is not None:
-            lod_layers.append((name, res))
+    # LOD summary
+    all_layers = _gdb_layer_names(target)
+    lod_layers = sorted(
+        [(name, parse_lod_name(name)) for name in all_layers if parse_lod_name(name) is not None],
+        key=lambda x: x[1],
+    )
 
-    lod_layers.sort(key=lambda x: x[1])
+    if lod_layers:
+        print(f"Feature Classes: ({len(lod_layers)} LODs)")
+        print(f"  {'Name':<14} {'Res':>4}  {'Cells':>8}  {'Data Fields'}")
+        print(f"  {'─' * 13} {'─' * 4} {'─' * 9}  {'─' * 40}")
 
-    print(f"\nFeature Classes: ({len(lod_layers)} LODs)")
-    if not lod_layers:
-        print("  (none)")
+        for layer_name, res in lod_layers:
+            gdf = _read_from_gdb(target, layer_name)
+            data_cols = _raster_data_columns(gdf)
+            factor_info = []
+            for col in sorted(data_cols):
+                if col.startswith("F") and col[1:].isdigit():
+                    fnum = int(col[1:])
+                    fname = FACTOR_NAMES.get(fnum, "?")
+                    factor_info.append(f"{col}({fname})")
+                else:
+                    factor_info.append(col)
+            print(f"  {layer_name:<14} {res:>4}  {len(gdf):>8}  {', '.join(factor_info)}")
     else:
-        print(f"  {'Name':<12} {'Res':>4} {'Cells':>10}  Data Fields")
-        print(f"  {'─' * 12} {'─' * 4} {'─' * 10}  {'─' * 40}")
-        for name, res in lod_layers:
-            try:
-                gdf = _read_from_gdb(target, name)
-                n_cells = len(gdf)
-                data_cols = _raster_data_columns(gdf)
-                fields_str = ", ".join(data_cols) if data_cols else "(none)"
-            except Exception:
-                n_cells = "?"
-                fields_str = "(read error)"
-            print(f"  {name:<12} {res:>4} {n_cells:>10}  {fields_str}")
+        print("Feature Classes: (none)")
 
     # Commit history
-    log_gdf = _read_log(target)
-    print(f"\nCommit History: ({len(log_gdf)} entries)")
-    if log_gdf.empty:
-        print("  (none)")
+    print()
+    if LOG_TABLE in all_layers:
+        log_gdf = _read_from_gdb(target, LOG_TABLE)
+        if not log_gdf.empty:
+            print(f"Commit History: ({len(log_gdf)} entries)")
+            print(f"  {'Timestamp':<28} {'LOD':<8} {'Method':<10} {'Cells':>7}"
+                  f"  {'Action':<7}  {'Factor':<16}  {'Source'}")
+            print(f"  {'─' * 27} {'─' * 7} {'─' * 9} {'─' * 7}"
+                  f"  {'─' * 6}  {'─' * 15}  {'─' * 26}")
+
+            for _, row in log_gdf.iterrows():
+                ts = str(row.get("committed_at", ""))[:27]
+                lod = str(row.get("lod", ""))
+                method = str(row.get("method", ""))
+                cells = int(row.get("cell_count", 0))
+                action = str(row.get("action", ""))
+                source = Path(str(row.get("raster_source", ""))).name
+
+                factor_val = row.get("factor", -1)
+                if factor_val and factor_val > 0:
+                    factor_str = f"F{int(factor_val)}({FACTOR_NAMES.get(int(factor_val), '?')})"
+                else:
+                    factor_str = "(none)"
+
+                print(f"  {ts:<28} {lod:<8} {method:<10} {cells:>7}"
+                      f"  {action:<7}  {factor_str:<16}  {source}")
     else:
-        print(f"  {'Timestamp':<28} {'LOD':<8} {'Method':<10} {'Cells':>7}  {'Action':<7}  Source")
-        print(f"  {'─' * 28} {'─' * 8} {'─' * 10} {'─' * 7}  {'─' * 7}  {'─' * 30}")
-        for _, row in log_gdf.iterrows():
-            ts = str(row.get("committed_at", ""))[:26]
-            lod = str(row.get("lod_name", ""))
-            method = str(row.get("method", ""))
-            cells = row.get("cell_count", "?")
-            action = str(row.get("action", ""))
-            source = Path(str(row.get("raster_source", ""))).name
-            print(f"  {ts:<28} {lod:<8} {method:<10} {cells:>7}  {action:<7}  {source}")
+        print("Commit History: (none)")
 
     print()
     return 0
@@ -977,19 +1061,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         required=True,
         help=(
-            "Raster config as path:method:resolution (standard) or "
-            "path:method (with --surface). Repeatable. "
-            "Example: elevation.tif:mean:9 or elevation.tif:mean"
+            "Raster config. Standard: path:method:resolution[:factor]. "
+            "Surface mode: path:method[:factor]. Repeatable. "
+            "Factor: 1=Elevation, 2=Slope, 3=Vegetation, 4=Soil. "
+            "Example: elevation.tif:mean:9:1"
         ),
     )
     p_commit.add_argument(
         "--surface",
         default=None,
         help=(
-            "Path to a pre-built H3 surface vector file (.geojson, .shp, .gdb). "
-            "Must contain GRID_ID and res columns. When provided, tessellation "
-            "is skipped and rasters are sampled directly into the provided cells. "
-            "Raster configs may omit resolution (inferred from surface)."
+            "Path to a pre-built H3 surface vector file. "
+            "Must contain GRID_ID and res columns."
         ),
     )
     p_commit.add_argument(
@@ -1012,7 +1095,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: List[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -1027,11 +1110,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
 
-    try:
-        return handler(args)
-    except Exception as e:
-        print(f"[ERROR] {e}", file=sys.stderr)
-        return 1
+    return handler(args)
 
 
 if __name__ == "__main__":
