@@ -201,18 +201,20 @@ class RasterBinEnricher:
             print(f"  [TIME] CRS reproject: {time.perf_counter() - t_reproj:.3f}s")
 
         # Build exactextract operation strings
+        # Note: exactextract automatically excludes nodata pixels from all
+        # calculations. Polygons with zero valid pixels return NaN, which
+        # we convert to None below. The nodata_threshold is approximated
+        # via 'count' (weighted valid pixel count) where available.
         t_extract = time.perf_counter()
         if method == "mean":
-            ops = ["mean", "frac_nodata"]
+            ops = ["mean", "count"]
             result_df = exact_extract(raster_path, sample_gdf, ops, output="pandas")
             values = result_df["mean"].values.copy()
+            counts = result_df["count"].values
 
-            # Apply nodata threshold: where nodata fraction > (1 - threshold),
-            # the valid fraction is below threshold → null
-            frac_nodata = result_df["frac_nodata"].values
-            below_threshold = frac_nodata > (1.0 - nodata_threshold)
+            # Where count is 0, no valid pixels existed → null
             values = values.astype(float)
-            values[below_threshold] = np.nan
+            values[counts == 0] = np.nan
 
             self.gdf[output_col] = values
             # Convert NaN to None for consistency with original behavior
@@ -221,37 +223,32 @@ class RasterBinEnricher:
             )
 
         elif method == "majority":
-            ops = ["majority", "variety", "frac_nodata"]
+            ops = ["majority", "variety", "count"]
             result_df = exact_extract(raster_path, sample_gdf, ops, output="pandas")
 
             values = result_df["majority"].values.copy()
             variety = result_df["variety"].values.copy()
-            frac_nodata = result_df["frac_nodata"].values
+            counts = result_df["count"].values
 
-            # Apply nodata threshold
-            below_threshold = frac_nodata > (1.0 - nodata_threshold)
-
-            # For majority, exactextract picks the class with the largest
-            # coverage fraction. Ties are broken by lowest value (matching
-            # original behavior since exact_extract sorts candidates).
             result_values = []
             tie_counts = []
             for i in range(len(values)):
-                if below_threshold[i] or np.isnan(values[i]):
+                val = values[i]
+                is_empty = counts[i] == 0
+                is_nan = isinstance(val, float) and np.isnan(val)
+
+                if is_empty or is_nan:
                     result_values.append(None)
                     tie_counts.append(None)
                 else:
                     result_values.append(
-                        int(values[i]) if np.isfinite(values[i]) else None
+                        int(val) if isinstance(val, (int, float)) and np.isfinite(val) else None
                     )
-                    # variety = number of unique classes. If variety == 1 and
-                    # majority exists, no tie. exactextract doesn't directly
-                    # report tie count the same way, so we use variety as a
-                    # proxy (1 = definitely no tie). For exact tie detection
-                    # we'd need "frac" per class, which is expensive. This is
-                    # a reasonable approximation.
+                    # variety = number of unique classes present. Used as a
+                    # proxy for tie detection (1 = no tie possible).
+                    v = variety[i]
                     tie_counts.append(
-                        int(variety[i]) if np.isfinite(variety[i]) else None
+                        int(v) if isinstance(v, (int, float)) and np.isfinite(v) else None
                     )
 
             self.gdf[output_col] = result_values
