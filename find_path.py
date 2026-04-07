@@ -79,6 +79,7 @@ import numpy as np
 from shapely.geometry import LineString, Point
 
 from geo_io import list_layers, read_vector, write_vector
+from profiles import ProfileEngine
 
 try:
     import pyogrio
@@ -223,6 +224,7 @@ def load_surface_model(gdb_path: Path) -> Dict[int, LODData]:
 def normalize_factors(
     lod: LODData,
     vehicle: VehicleProfile = DEFAULT_VEHICLE,
+    engine: Optional[ProfileEngine] = None,
 ) -> None:
     """
     Compute normalized factor values (0.0–1.0) for all cells in a LOD.
@@ -230,29 +232,35 @@ def normalize_factors(
     Populates lod.cell_data with per-cell normalized factors and
     lod.coords / lod.cell_set for graph operations.
 
-    Normalization strategy (generic):
-      - F1 (Elevation): Inverted linear scale. Lower elevations are easier
-        to traverse. norm = 1.0 - (val - min) / (max - min).
-      - F2 (Slope): Inverted linear scale. Flatter is better.
-        norm = 1.0 - (val - min) / (max - min). Clamped: slopes at or
-        near 0° get 1.0, max observed slope gets ~0.0.
-      - F3 (Vegetation): Linear scale mapped from classification.
-        Currently assumes higher raw value = denser/harder vegetation,
-        so norm = 1.0 - (val - min) / (max - min).
-      - F4 (Soil): Linear scale mapped from classification.
-        Currently assumes higher raw value = softer/worse soil,
-        so norm = 1.0 - (val - min) / (max - min).
-
-    For factors where only one unique value exists, all cells get 1.0
-    (no variation = no restriction from that factor).
-
-    STUB: When vehicle profiles are implemented, each vehicle will define
-    its own normalization function per factor (e.g., tracked vehicles
-    may have a gentler slope penalty curve).
+    If a ProfileEngine is provided, normalization uses the loaded factor
+    schemas and vehicle profile (schema-based chain). Otherwise, falls
+    back to generic min/max normalization from the data range.
     """
     gdf = lod.gdf
 
-    # Compute min/max for each present factor
+    if engine is not None:
+        # ── Schema-based normalization via ProfileEngine ─────────────
+        for _, row in gdf.iterrows():
+            grid_id = str(row["GRID_ID"])
+            lat, lon = h3.cell_to_latlng(grid_id)
+
+            lod.coords[grid_id] = (lat, lon)
+            lod.cell_set.add(grid_id)
+
+            # Collect raw values
+            raw = {}
+            for col in FACTOR_COLS:
+                if col in gdf.columns:
+                    val = row.get(col)
+                    # Keep raw value as-is (int, float, str, or NaN)
+                    raw[col] = val
+                # Missing columns are omitted — engine treats them as 1.0
+
+            # Normalize through the engine chain
+            lod.cell_data[grid_id] = engine.normalize_cell(raw)
+        return
+
+    # ── Fallback: generic min/max normalization ──────────────────────
     factor_ranges: Dict[str, Tuple[float, float]] = {}
     for col in FACTOR_COLS:
         if col not in gdf.columns:
@@ -263,7 +271,6 @@ def normalize_factors(
         fmin, fmax = float(valid.min()), float(valid.max())
         factor_ranges[col] = (fmin, fmax)
 
-    # Build per-cell data
     for _, row in gdf.iterrows():
         grid_id = str(row["GRID_ID"])
         lat, lon = h3.cell_to_latlng(grid_id)
@@ -274,22 +281,20 @@ def normalize_factors(
         cell = {}
         for col in FACTOR_COLS:
             if col not in gdf.columns or col not in factor_ranges:
-                cell[col] = 1.0  # Missing factor = no restriction
+                cell[col] = 1.0
                 continue
 
             raw = row.get(col)
             if raw is None or (isinstance(raw, float) and math.isnan(raw)):
-                cell[col] = 0.0  # NoData = impassable
+                cell[col] = 0.0
                 continue
 
             fmin, fmax = factor_ranges[col]
             if fmax == fmin:
-                cell[col] = 1.0  # No variation
+                cell[col] = 1.0
             else:
-                # Inverted: lower raw value = higher mobility
                 cell[col] = 1.0 - (float(raw) - fmin) / (fmax - fmin)
 
-            # Clamp to [0.0, 1.0]
             cell[col] = max(0.0, min(1.0, cell[col]))
 
         lod.cell_data[grid_id] = cell
@@ -643,6 +648,7 @@ def find_path(
     start: Optional[str] = None,
     end: Optional[str] = None,
     vehicle: VehicleProfile = DEFAULT_VEHICLE,
+    engine: Optional[ProfileEngine] = None,
 ) -> Tuple[List[str], Dict[str, Any]]:
     """
     Run hierarchical pathfinding over a Surface Model FGDB.
@@ -657,6 +663,9 @@ def find_path(
         End point as "lat,lon" or an H3 cell index. If None, auto-selected.
     vehicle : VehicleProfile
         Vehicle parameters for normalization and speed.
+    engine : ProfileEngine, optional
+        If provided, uses schema-based normalization. Otherwise falls back
+        to generic min/max normalization.
 
     Returns
     -------
@@ -678,9 +687,12 @@ def find_path(
     print(f"Available LODs: {resolutions} (coarsest: {resolutions[0]}, finest: {resolutions[-1]})")
 
     # ── Normalize factors for all LODs ───────────────────────────────────
-    print("Normalizing factors...")
+    if engine:
+        print(f"Normalizing factors via {engine.vehicle.vehicle_name} profile...")
+    else:
+        print("Normalizing factors (generic min/max)...")
     for res in resolutions:
-        normalize_factors(lod_map[res], vehicle)
+        normalize_factors(lod_map[res], vehicle, engine=engine)
         print(f"  LOD_{res:02d}: {len(lod_map[res].cell_set)} traversable cells")
 
     # ── Resolve start/end points ─────────────────────────────────────────
@@ -753,7 +765,7 @@ def find_path(
         "cells": len(path),
         "resolutions_used": resolutions,
         "elapsed_s": elapsed,
-        "vehicle": vehicle.name,
+        "vehicle": engine.vehicle.vehicle_name if engine else vehicle.name,
     }
 
     print(f"\n{'═' * 50}")
@@ -1026,7 +1038,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-speed",
         type=float,
         default=DEFAULT_MAX_SPEED_MS,
-        help=f"Max traversal speed in m/s (default: {DEFAULT_MAX_SPEED_MS:.1f}, ~30 mph).",
+        help=f"Max traversal speed in m/s (default: {DEFAULT_MAX_SPEED_MS:.1f}, ~30 mph). "
+             "Overridden by --vehicle if provided.",
+    )
+    parser.add_argument(
+        "--factor-schema",
+        action="append",
+        default=None,
+        help=(
+            "Path to a factor schema JSON (e.g., landfire_gap_2011.json, uscs_soils.json). "
+            "Repeatable — one per categorical factor. "
+            "Required when using --vehicle."
+        ),
+    )
+    parser.add_argument(
+        "--vehicle",
+        default=None,
+        help=(
+            "Path to a vehicle profile JSON (e.g., light_wheeled.json). "
+            "Defines per-factor normalization. Requires --factor-schema for "
+            "categorical factors (F3 Vegetation, F4 Soil). "
+            "If omitted, uses generic min/max normalization."
+        ),
     )
 
     return parser
@@ -1066,18 +1099,51 @@ def main(argv: List[str] | None = None) -> int:
         max_speed_ms=args.max_speed,
     )
 
+    # ── Build ProfileEngine if schemas/vehicle are provided ──────────
+    engine = None
+    if args.vehicle or args.factor_schema:
+        schema_paths = args.factor_schema or []
+
+        # Validate schema files exist
+        for sp in schema_paths:
+            if not Path(sp).exists():
+                print(f"[ERROR] Factor schema not found: {sp}", file=sys.stderr)
+                return 2
+
+        # Validate vehicle file exists
+        vehicle_path = None
+        if args.vehicle:
+            vehicle_path = Path(args.vehicle)
+            if not vehicle_path.exists():
+                print(f"[ERROR] Vehicle profile not found: {vehicle_path}", file=sys.stderr)
+                return 2
+
+        print("Loading profiles...")
+        engine = ProfileEngine(
+            factor_schemas=schema_paths,
+            vehicle_path=str(vehicle_path) if vehicle_path else None,
+        )
+
+        # Override vehicle max speed from the profile
+        if engine.vehicle.max_speed_ms > 0:
+            vehicle = VehicleProfile(
+                name=engine.vehicle.vehicle_name,
+                max_speed_ms=engine.vehicle.max_speed_ms,
+            )
+
     try:
         path, metadata = find_path(
             surface_gdb=surface_path,
             start=args.start,
             end=args.end,
             vehicle=vehicle,
+            engine=engine,
         )
 
         # Re-load LOD map for coordinate lookup during export
         lod_map = load_surface_model(surface_path)
         for lod in lod_map.values():
-            normalize_factors(lod, vehicle)
+            normalize_factors(lod, vehicle, engine=engine)
 
         export_path(
             path=path,
