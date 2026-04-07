@@ -510,6 +510,38 @@ def find_farthest_pair(lod: LODData) -> Tuple[str, str]:
     return best_pair
 
 
+def _build_scoped_lod(
+    coarse_cells: List[str],
+    fine_lod: LODData,
+    fine_res: int,
+) -> Optional[LODData]:
+    """
+    Build a lightweight LODData containing only the fine-resolution children
+    of the given coarse cells that exist in the fine LOD.
+
+    This scopes A* to a small neighborhood instead of the full dataset.
+    """
+    scoped_cells: Set[str] = set()
+
+    for coarse_cell in coarse_cells:
+        try:
+            children = h3.cell_to_children(coarse_cell, fine_res)
+        except Exception:
+            continue
+        scoped_cells.update(set(children) & fine_lod.cell_set)
+
+    if not scoped_cells:
+        return None
+
+    # Build a mini LODData with only the scoped cells
+    scoped = LODData(resolution=fine_res, gdf=fine_lod.gdf)  # gdf unused after normalization
+    scoped.cell_set = scoped_cells
+    scoped.coords = {cid: fine_lod.coords[cid] for cid in scoped_cells if cid in fine_lod.coords}
+    scoped.cell_data = {cid: fine_lod.cell_data[cid] for cid in scoped_cells if cid in fine_lod.cell_data}
+
+    return scoped
+
+
 def refine_path(
     coarse_path: List[str],
     coarse_res: int,
@@ -521,94 +553,107 @@ def refine_path(
 
     For each consecutive pair of cells in the coarse path:
       1. Find all children of both cells that exist in the fine LOD
-      2. Identify entry/exit cells (children nearest to the coarse cell centroids)
-      3. Run A* between them at the fine resolution
-      4. Stitch the fine segments together
+      2. Build a scoped mini-LOD containing only those children
+      3. Identify entry/exit cells (children nearest to the coarse cell centroids)
+      4. Run A* between them on the scoped LOD (fast — tens to hundreds of cells)
+      5. Stitch the fine segments together
 
     Cells whose children don't exist in the fine LOD are kept at coarse
     resolution (their centroid is included in the path coordinates).
     """
     fine_res = fine_lod.resolution
     refined_segments: List[List[str]] = []
+    segments_refined = 0
+    segments_skipped = 0
 
+    total_pairs = len(coarse_path) - 1
     print(f"    Refining {len(coarse_path)} coarse cells from res {coarse_res} -> {fine_res}")
+    print(f"    ({total_pairs} segments to process)")
 
-    for i, coarse_cell in enumerate(coarse_path):
-        # Get children of this coarse cell at the fine resolution
-        try:
-            children = h3.cell_to_children(coarse_cell, fine_res)
-        except Exception:
-            children = set()
-
-        # Filter to only children that exist in the fine LOD data
-        available_children = children & fine_lod.cell_set
-
-        if not available_children:
-            # No fine data for this cell — keep it as a "pass-through" marker
-            refined_segments.append([coarse_cell])
-            continue
+    for i in range(len(coarse_path)):
+        coarse_cell = coarse_path[i]
 
         if i == 0:
-            # First cell in path: just note its available children
-            # The actual A* happens between consecutive cells
+            # First cell — check if it has children, add entry point
+            try:
+                children = set(h3.cell_to_children(coarse_cell, fine_res)) & fine_lod.cell_set
+            except Exception:
+                children = set()
+
+            if children:
+                lat, lon = h3.cell_to_latlng(coarse_cell)
+                entry = _nearest_child(lat, lon, children, fine_lod)
+                if entry:
+                    refined_segments.append([entry])
+            else:
+                refined_segments.append([coarse_cell])
             continue
 
-        # Find children of previous and current coarse cells
+        # For each consecutive pair: prev_cell -> coarse_cell
         prev_cell = coarse_path[i - 1]
+
+        # Get children of both cells
         try:
-            prev_children = h3.cell_to_children(prev_cell, fine_res)
+            prev_children = set(h3.cell_to_children(prev_cell, fine_res)) & fine_lod.cell_set
         except Exception:
             prev_children = set()
 
-        prev_available = prev_children & fine_lod.cell_set
+        try:
+            curr_children = set(h3.cell_to_children(coarse_cell, fine_res)) & fine_lod.cell_set
+        except Exception:
+            curr_children = set()
 
-        if not prev_available or not available_children:
-            # One side has no fine data — skip refinement for this segment
-            if i == 1 and not prev_available:
-                refined_segments.append([prev_cell])
+        if not prev_children or not curr_children:
+            # One side has no fine data — keep coarse cell
+            refined_segments.append([coarse_cell])
+            segments_skipped += 1
             continue
 
-        # Find entry point (child of prev nearest to prev's centroid)
+        # Build a scoped LOD with ONLY children of these two cells
+        # (+ one ring of neighbors for connectivity)
+        scope_parents = [prev_cell, coarse_cell]
+        scoped_lod = _build_scoped_lod(scope_parents, fine_lod, fine_res)
+
+        if scoped_lod is None or len(scoped_lod.cell_set) < 2:
+            refined_segments.append([coarse_cell])
+            segments_skipped += 1
+            continue
+
+        # Find entry point (child of prev nearest to the boundary between cells)
+        # Use the midpoint between the two coarse centroids as the target
         prev_lat, prev_lon = h3.cell_to_latlng(prev_cell)
-        entry = _nearest_child(prev_lat, prev_lon, prev_available, fine_lod)
-
-        # Find exit point (child of current nearest to current's centroid)
         curr_lat, curr_lon = h3.cell_to_latlng(coarse_cell)
-        exit_cell = _nearest_child(curr_lat, curr_lon, available_children, fine_lod)
 
-        if entry and exit_cell and entry != exit_cell:
-            # Run A* at fine resolution between entry and exit
-            segment = astar(fine_lod, entry, exit_cell, vehicle)
+        entry = _nearest_child(prev_lat, prev_lon, prev_children, fine_lod)
+        exit_cell = _nearest_child(curr_lat, curr_lon, curr_children, fine_lod)
+
+        if not entry or not exit_cell or entry == exit_cell:
+            refined_segments.append([coarse_cell])
+            segments_skipped += 1
+            continue
+
+        # Run A* on the SCOPED LOD (small! tens to hundreds of cells)
+        segment = astar(scoped_lod, entry, exit_cell, vehicle)
+
+        if segment:
+            # Avoid duplicating the entry cell if it matches previous segment end
+            if refined_segments and refined_segments[-1][-1] == segment[0]:
+                segment = segment[1:]
             if segment:
-                # Avoid duplicating the entry cell if it's already the end
-                # of the previous segment
-                if refined_segments and refined_segments[-1][-1] == segment[0]:
-                    segment = segment[1:]
-                if segment:
-                    refined_segments.append(segment)
-            else:
-                # A* failed at fine level — fall back to coarse
-                if i == 1:
-                    refined_segments.append([prev_cell])
-                refined_segments.append([coarse_cell])
-        elif entry:
-            refined_segments.append([entry])
+                refined_segments.append(segment)
+            segments_refined += 1
+        else:
+            # A* failed on scoped LOD — fall back to coarse
+            refined_segments.append([coarse_cell])
+            segments_skipped += 1
 
-    # Handle last cell if it wasn't covered
-    if coarse_path:
-        last = coarse_path[-1]
-        try:
-            last_children = h3.cell_to_children(last, fine_res) & fine_lod.cell_set
-        except Exception:
-            last_children = set()
+        # Progress
+        if (i + 1) % 50 == 0 or i == total_pairs:
+            print(f"    Processed {i + 1}/{total_pairs} segments "
+                  f"(refined: {segments_refined}, skipped: {segments_skipped})", end="\r")
 
-        if last_children:
-            last_lat, last_lon = h3.cell_to_latlng(last)
-            exit_cell = _nearest_child(last_lat, last_lon, last_children, fine_lod)
-            if exit_cell and (not refined_segments or refined_segments[-1][-1] != exit_cell):
-                refined_segments.append([exit_cell])
-        elif not refined_segments or refined_segments[-1][-1] != last:
-            refined_segments.append([last])
+    print(f"    Processed {total_pairs}/{total_pairs} segments "
+          f"(refined: {segments_refined}, skipped: {segments_skipped})")
 
     # Flatten segments into a single path
     flat: List[str] = []
