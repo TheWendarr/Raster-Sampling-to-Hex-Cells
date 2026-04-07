@@ -1,0 +1,2389 @@
+{
+  "schema_id": "LANDFIRE_GAP_2011",
+  "schema_name": "GAP/LANDFIRE National Terrestrial Ecosystems 2011",
+  "factor": 3,
+  "factor_name": "Vegetation",
+  "region": "CONUS",
+  "source": "USGS GAP Analysis Program / LANDFIRE, doi:10.5066/F7ZS2TM0",
+  "description": "Complete 584-class terrestrial ecosystem classification for the Conterminous US. Each ecosystem code is mapped to a terrain mobility class for vehicle traversal analysis.",
+  "code_type": "integer",
+  "terrain_classes": {
+    "grassland": "Open grassland, prairie, steppe, or meadow. Minimal obstruction.",
+    "agriculture_pasture": "Managed pasture or hay fields. Generally flat, maintained.",
+    "agriculture_cropland": "Cultivated cropland. Seasonal obstruction varies.",
+    "open_woodland": "Open woodland or savanna. Trees present but widely spaced.",
+    "pinyon_juniper_woodland": "Pinyon-juniper or similar dry woodland. Moderate tree density.",
+    "open_coniferous_forest": "Open pine or conifer forest/woodland. Moderate canopy.",
+    "open_deciduous_forest": "Open deciduous or mixed forest. Moderate canopy.",
+    "dense_coniferous_forest": "Dense spruce-fir, hemlock, or subalpine conifer forest.",
+    "dense_deciduous_forest": "Dense mesic hardwood, cove, or old-growth deciduous forest.",
+    "managed_forest": "Plantation or managed timber forest.",
+    "shrubland": "Shrubland, scrub, or thornscrub. Moderate obstruction.",
+    "semi_desert_shrub": "Semi-desert sagebrush, saltbush, or similar low shrub.",
+    "chaparral": "Dense chaparral. Significant obstruction to vehicles.",
+    "coastal_scrub": "Coastal sage scrub or similar.",
+    "desert_scrub": "Desert scrub, creosotebush, or sparse desert vegetation.",
+    "alpine_tundra": "Alpine tundra, fell-field, or krummholz. Exposed, sparse.",
+    "riparian_forest": "Riparian or floodplain forest. Potentially soft ground.",
+    "swamp": "Swamp, bog, fen, or peatland. Saturated ground.",
+    "wetland": "Herbaceous wetland, wet prairie, or emergent marsh.",
+    "marsh": "Tidal or salt marsh. Saturated, potentially tidal.",
+    "wet_flatwoods": "Wet pine flatwoods. Seasonally saturated.",
+    "coastal_dune": "Coastal dune or sand grassland. Loose sand surface.",
+    "beach": "Sandy beach. Loose, unconsolidated sand.",
+    "barren": "Barren, sparsely vegetated, or rocky ground.",
+    "cliff_rock": "Cliff, talus, bedrock, or scree. Impassable to most vehicles.",
+    "water": "Open water. Impassable.",
+    "ice_snow": "Perennial ice or snow. Impassable without specialized equipment.",
+    "developed_low": "Developed open space or low intensity. Roads likely present.",
+    "developed_medium": "Developed medium intensity. Urban infrastructure.",
+    "developed_high": "Developed high intensity. Dense urban core.",
+    "developed_industrial": "Quarries, mines, or industrial extraction sites.",
+    "introduced_vegetation": "Introduced or invasive vegetation. Varies widely.",
+    "disturbed": "Recently burned, logged, or otherwise disturbed.",
+    "unmapped": "Unmapped or undetermined land cover.",
+    "unknown": "Unclassified ecosystem type."
+  },
+  "lookup": {
+    "1": {
+      "class": "swamp",
+      "label": "South Florida Bayhead Swamp"
+    },
+    "2": {
+      "class": "unknown",
+      "label": "South Florida Cypress Dome"
+    },
+    "3": {
+      "class": "open_woodland",
+      "label": "South Florida Dwarf Cypress Savanna"
+    },
+    "4": {
+      "class": "swamp",
+      "label": "South Florida Mangrove Swamp"
+    },
+    "5": {
+      "class": "unknown",
+      "label": "South Florida Hardwood Hammock"
+    },
+    "6": {
+      "class": "coastal_dune",
+      "label": "Southeast Florida Coastal Strand and Maritime Hammock"
+    },
+    "7": {
+      "class": "coastal_dune",
+      "label": "Southwest Florida Coastal Strand and Maritime Hammock"
+    },
+    "8": {
+      "class": "barren",
+      "label": "South Florida Pine Rockland"
+    },
+    "9": {
+      "class": "open_coniferous_forest",
+      "label": "Atlantic Coastal Plain Fall-line Sandhills Longleaf Pine Woodland - Open Understory"
+    },
+    "10": {
+      "class": "open_coniferous_forest",
+      "label": "Atlantic Coastal Plain Fall-line Sandhills Longleaf Pine Woodland - Scrub/Shrub Understory"
+    },
+    "11": {
+      "class": "open_coniferous_forest",
+      "label": "Atlantic Coastal Plain Upland Longleaf Pine Woodland"
+    },
+    "12": {
+      "class": "coastal_dune",
+      "label": "Atlantic Coastal Plain Xeric River Dune"
+    },
+    "13": {
+      "class": "open_coniferous_forest",
+      "label": "East Gulf Coastal Plain Interior Upland Longleaf Pine Woodland - Open Understory Modifier"
+    },
+    "14": {
+      "class": "open_coniferous_forest",
+      "label": "East Gulf Coastal Plain Interior Upland Longleaf Pine Woodland - Scrub/Shrub Modifier"
+    },
+    "15": {
+      "class": "shrubland",
+      "label": "Florida Longleaf Pine Sandhill - Scrub/Shrub Understory Modifier"
+    },
+    "16": {
+      "class": "unknown",
+      "label": "Florida Longleaf Pine Sandhill- Open Understory Modifier"
+    },
+    "17": {
+      "class": "open_coniferous_forest",
+      "label": "West Gulf Coastal Plain Upland Longleaf Pine Forest and Woodland"
+    },
+    "18": {
+      "class": "open_deciduous_forest",
+      "label": "Atlantic Coastal Plain Central Maritime Forest"
+    },
+    "19": {
+      "class": "open_deciduous_forest",
+      "label": "Atlantic Coastal Plain Southern Maritime Forest"
+    },
+    "20": {
+      "class": "open_woodland",
+      "label": "Central and South Texas Coastal Fringe Forest and Woodland"
+    },
+    "21": {
+      "class": "open_deciduous_forest",
+      "label": "East Gulf Coastal Plain Limestone Forest"
+    },
+    "22": {
+      "class": "open_deciduous_forest",
+      "label": "East Gulf Coastal Plain Maritime Forest"
+    },
+    "23": {
+      "class": "cliff_rock",
+      "label": "East Gulf Coastal Plain Southern Loess Bluff Forest"
+    },
+    "24": {
+      "class": "dense_deciduous_forest",
+      "label": "East Gulf Coastal Plain Southern Mesic Slope Forest"
+    },
+    "25": {
+      "class": "open_deciduous_forest",
+      "label": "Mississippi Delta Maritime Forest"
+    },
+    "26": {
+      "class": "dense_deciduous_forest",
+      "label": "Southern Coastal Plain Dry Upland Hardwood Forest"
+    },
+    "27": {
+      "class": "unknown",
+      "label": "Southern Coastal Plain Oak Dome and Hammock"
+    },
+    "28": {
+      "class": "open_woodland",
+      "label": "West Gulf Coastal Plain Chenier and Upper Texas Coastal Fringe Forest and Woodland"
+    },
+    "29": {
+      "class": "dense_deciduous_forest",
+      "label": "West Gulf Coastal Plain Mesic Hardwood Forest"
+    },
+    "30": {
+      "class": "open_coniferous_forest",
+      "label": "East-Central Texas Plains Pine Forest and Woodland"
+    },
+    "31": {
+      "class": "dense_deciduous_forest",
+      "label": "West Gulf Coastal Plain Pine-Hardwood Forest"
+    },
+    "32": {
+      "class": "open_coniferous_forest",
+      "label": "West Gulf Coastal Plain Sandhill Oak and Shortleaf Pine Forest and Woodland"
+    },
+    "33": {
+      "class": "open_coniferous_forest",
+      "label": "Atlantic Coastal Plain Fall-Line Sandhills Longleaf Pine Woodland - Loblolly Modifier"
+    },
+    "34": {
+      "class": "managed_forest",
+      "label": "Deciduous Plantations"
+    },
+    "35": {
+      "class": "open_coniferous_forest",
+      "label": "East Gulf Coastal Plain Interior Upland Longleaf Pine Woodland - Loblolly Modifier"
+    },
+    "36": {
+      "class": "open_coniferous_forest",
+      "label": "East Gulf Coastal Plain Interior Upland Longleaf Pine Woodland - Offsite Hardwood Modifier"
+    },
+    "37": {
+      "class": "wet_flatwoods",
+      "label": "East Gulf Coastal Plain Near-Coast Pine Flatwoods - Offsite Hardwood Modifier"
+    },
+    "38": {
+      "class": "managed_forest",
+      "label": "Evergreen Plantation or Managed Pine"
+    },
+    "39": {
+      "class": "open_woodland",
+      "label": "California Central Valley Mixed Oak Savanna"
+    },
+    "40": {
+      "class": "open_coniferous_forest",
+      "label": "California Coastal Closed-Cone Conifer Forest and Woodland"
+    },
+    "41": {
+      "class": "open_woodland",
+      "label": "California Coastal Live Oak Woodland and Savanna"
+    },
+    "42": {
+      "class": "open_coniferous_forest",
+      "label": "California Lower Montane Blue Oak-Foothill Pine Woodland and Savanna"
+    },
+    "43": {
+      "class": "open_woodland",
+      "label": "Central and Southern California Mixed Evergreen Woodland"
+    },
+    "44": {
+      "class": "open_coniferous_forest",
+      "label": "Mediterranean California Lower Montane Black Oak-Conifer Forest and Woodland"
+    },
+    "45": {
+      "class": "open_woodland",
+      "label": "Southern California Oak Woodland and Savanna"
+    },
+    "46": {
+      "class": "shrubland",
+      "label": "Madrean Encinal"
+    },
+    "47": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Madrean Pinyon-Juniper Woodland"
+    },
+    "48": {
+      "class": "open_coniferous_forest",
+      "label": "Madrean Pine-Oak Forest and Woodland"
+    },
+    "49": {
+      "class": "open_deciduous_forest",
+      "label": "Madrean Upper Montane Conifer-Oak Forest and Woodland"
+    },
+    "50": {
+      "class": "dense_deciduous_forest",
+      "label": "Edwards Plateau Dry-Mesic Slope Forest and Woodland"
+    },
+    "51": {
+      "class": "open_woodland",
+      "label": "Edwards Plateau Limestone Savanna and Woodland"
+    },
+    "52": {
+      "class": "unknown",
+      "label": "Edwards Plateau Mesic Canyon"
+    },
+    "53": {
+      "class": "open_woodland",
+      "label": "Llano Uplift Acidic Forest, Woodland and Glade"
+    },
+    "54": {
+      "class": "open_coniferous_forest",
+      "label": "East Cascades Oak-Ponderosa Pine Forest and Woodland"
+    },
+    "55": {
+      "class": "open_deciduous_forest",
+      "label": "Mediterranean California Mixed Evergreen Forest"
+    },
+    "56": {
+      "class": "open_woodland",
+      "label": "Mediterranean California Mixed Oak Woodland"
+    },
+    "57": {
+      "class": "open_coniferous_forest",
+      "label": "North Pacific Dry Douglas-fir-(Madrone) Forest and Woodland"
+    },
+    "58": {
+      "class": "open_woodland",
+      "label": "North Pacific Oak Woodland"
+    },
+    "59": {
+      "class": "shrubland",
+      "label": "Edwards Plateau Limestone Shrubland"
+    },
+    "60": {
+      "class": "open_deciduous_forest",
+      "label": "Allegheny-Cumberland Dry Oak Forest and Woodland - Hardwood"
+    },
+    "61": {
+      "class": "open_deciduous_forest",
+      "label": "Allegheny-Cumberland Dry Oak Forest and Woodland - Pine Modifier"
+    },
+    "62": {
+      "class": "open_deciduous_forest",
+      "label": "Central and Southern Appalachian Montane Oak Forest"
+    },
+    "63": {
+      "class": "dense_deciduous_forest",
+      "label": "Central and Southern Appalachian Northern Hardwood Forest"
+    },
+    "64": {
+      "class": "open_coniferous_forest",
+      "label": "Central Appalachian Oak and Pine Forest"
+    },
+    "65": {
+      "class": "open_deciduous_forest",
+      "label": "Crosstimbers Oak Forest and Woodland"
+    },
+    "66": {
+      "class": "open_woodland",
+      "label": "East Gulf Coastal Plain Black Belt Calcareous Prairie and Woodland - Woodland Modifier"
+    },
+    "67": {
+      "class": "dense_deciduous_forest",
+      "label": "East Gulf Coastal Plain Northern Dry Upland Hardwood Forest"
+    },
+    "68": {
+      "class": "unknown",
+      "label": "East Gulf Coastal Plain Northern Loess Plain Oak-Hickory Upland - Hardwood Modifier"
+    },
+    "69": {
+      "class": "unknown",
+      "label": "East Gulf Coastal Plain Northern Loess Plain Oak-Hickory Upland - Juniper Modifier"
+    },
+    "70": {
+      "class": "open_woodland",
+      "label": "East-Central Texas Plains Post Oak Savanna and Woodland"
+    },
+    "71": {
+      "class": "coastal_dune",
+      "label": "Lower Mississippi River Dune Woodland and Forest"
+    },
+    "72": {
+      "class": "dense_deciduous_forest",
+      "label": "Mississippi River Alluvial Plain Dry-Mesic Loess Slope Forest"
+    },
+    "73": {
+      "class": "open_deciduous_forest",
+      "label": "North-Central Interior Dry Oak Forest and Woodland"
+    },
+    "74": {
+      "class": "dense_deciduous_forest",
+      "label": "North-Central Interior Dry-Mesic Oak Forest and Woodland"
+    },
+    "75": {
+      "class": "open_deciduous_forest",
+      "label": "Northeastern Interior Dry Oak Forest - Mixed Modifier"
+    },
+    "76": {
+      "class": "open_deciduous_forest",
+      "label": "Northeastern Interior Dry Oak Forest - Virginia/Pitch Pine Modifier"
+    },
+    "77": {
+      "class": "open_deciduous_forest",
+      "label": "Northeastern Interior Dry Oak Forest-Hardwood Modifier"
+    },
+    "78": {
+      "class": "dense_deciduous_forest",
+      "label": "Northeastern Interior Dry-Mesic Oak Forest"
+    },
+    "79": {
+      "class": "dense_deciduous_forest",
+      "label": "Northern Atlantic Coastal Plain Dry Hardwood Forest"
+    },
+    "80": {
+      "class": "open_deciduous_forest",
+      "label": "Crowley's Ridge Sand Forest"
+    },
+    "81": {
+      "class": "open_deciduous_forest",
+      "label": "Ouachita Montane Oak Forest"
+    },
+    "82": {
+      "class": "open_woodland",
+      "label": "Ozark-Ouachita Dry Oak Woodland"
+    },
+    "83": {
+      "class": "dense_deciduous_forest",
+      "label": "Ozark-Ouachita Dry-Mesic Oak Forest"
+    },
+    "84": {
+      "class": "open_deciduous_forest",
+      "label": "Southern and Central Appalachian Oak Forest"
+    },
+    "85": {
+      "class": "open_deciduous_forest",
+      "label": "Southern and Central Appalachian Oak Forest - Xeric"
+    },
+    "86": {
+      "class": "dense_deciduous_forest",
+      "label": "Southern Interior Low Plateau Dry-Mesic Oak Forest"
+    },
+    "87": {
+      "class": "open_deciduous_forest",
+      "label": "Southern Ridge and Valley Dry Calcareous Forest"
+    },
+    "88": {
+      "class": "open_deciduous_forest",
+      "label": "Southern Ridge and Valley Dry Calcareous Forest - Pine modifier"
+    },
+    "89": {
+      "class": "dense_deciduous_forest",
+      "label": "East Gulf Coastal Plain Northern Dry Upland Hardwood Forest - Offsite Pine Modifier"
+    },
+    "90": {
+      "class": "managed_forest",
+      "label": "Managed Tree Plantation"
+    },
+    "91": {
+      "class": "disturbed",
+      "label": "Ruderal forest"
+    },
+    "92": {
+      "class": "open_deciduous_forest",
+      "label": "Southern Piedmont Dry Oak-(Pine) Forest - Loblolly Pine Modifier"
+    },
+    "93": {
+      "class": "dense_coniferous_forest",
+      "label": "Acadian Low-Elevation Spruce-Fir-Hardwood Forest"
+    },
+    "94": {
+      "class": "dense_coniferous_forest",
+      "label": "Acadian-Appalachian Montane Spruce-Fir Forest"
+    },
+    "95": {
+      "class": "dense_coniferous_forest",
+      "label": "Appalachian Hemlock-Hardwood Forest"
+    },
+    "96": {
+      "class": "dense_coniferous_forest",
+      "label": "Central and Southern Appalachian Spruce-Fir Forest"
+    },
+    "97": {
+      "class": "unmapped",
+      "label": "Unmapped 1"
+    },
+    "98": {
+      "class": "open_deciduous_forest",
+      "label": "Laurentian-Acadian Northern Hardwoods Forest"
+    },
+    "99": {
+      "class": "open_deciduous_forest",
+      "label": "Laurentian-Acadian Northern Pine-(Oak) Forest"
+    },
+    "100": {
+      "class": "dense_coniferous_forest",
+      "label": "Laurentian-Acadian Pine-Hemlock-Hardwood Forest"
+    },
+    "101": {
+      "class": "cliff_rock",
+      "label": "Paleozoic Plateau Bluff and Talus"
+    },
+    "102": {
+      "class": "dense_deciduous_forest",
+      "label": "Southern Appalachian Northern Hardwood Forest"
+    },
+    "103": {
+      "class": "dense_deciduous_forest",
+      "label": "Atlantic Coastal Plain Dry and Dry-Mesic Oak Forest"
+    },
+    "104": {
+      "class": "open_coniferous_forest",
+      "label": "Atlantic Coastal Plain Fall-line Sandhills Longleaf Pine Woodland - Offsite Hardwood"
+    },
+    "105": {
+      "class": "open_coniferous_forest",
+      "label": "East Gulf Coastal Plain Interior Shortleaf Pine-Oak Forest - Hardwood Modifier"
+    },
+    "106": {
+      "class": "open_coniferous_forest",
+      "label": "East Gulf Coastal Plain Interior Shortleaf Pine-Oak Forest - Mixed Modifier"
+    },
+    "107": {
+      "class": "open_coniferous_forest",
+      "label": "Ozark-Ouachita Shortleaf Pine-Bluestem Woodland"
+    },
+    "108": {
+      "class": "open_coniferous_forest",
+      "label": "Ozark-Ouachita Shortleaf Pine-Oak Forest and Woodland"
+    },
+    "109": {
+      "class": "open_coniferous_forest",
+      "label": "Southeastern Interior Longleaf Pine Woodland"
+    },
+    "110": {
+      "class": "open_coniferous_forest",
+      "label": "Southern Appalachian Low Mountain Pine Forest"
+    },
+    "111": {
+      "class": "open_deciduous_forest",
+      "label": "Southern Piedmont Dry Oak-(Pine) Forest"
+    },
+    "112": {
+      "class": "open_deciduous_forest",
+      "label": "Southern Piedmont Dry Oak-(Pine) Forest - Hardwood Modifier"
+    },
+    "113": {
+      "class": "open_deciduous_forest",
+      "label": "Southern Piedmont Dry Oak-(Pine) Forest - Mixed Modifier"
+    },
+    "114": {
+      "class": "open_deciduous_forest",
+      "label": "Southern Piedmont Dry Oak-Heath Forest - Mixed Modifier"
+    },
+    "115": {
+      "class": "open_deciduous_forest",
+      "label": "Eastern Great Plains Tallgrass Aspen Parkland"
+    },
+    "116": {
+      "class": "open_deciduous_forest",
+      "label": "Northwestern Great Plains Aspen Forest and Parkland"
+    },
+    "117": {
+      "class": "shrubland",
+      "label": "Northwestern Great Plains Shrubland"
+    },
+    "118": {
+      "class": "open_deciduous_forest",
+      "label": "Western Great Plains Dry Bur Oak Forest and Woodland"
+    },
+    "119": {
+      "class": "unknown",
+      "label": "Western Great Plains Wooded Draw and Ravine"
+    },
+    "120": {
+      "class": "dense_deciduous_forest",
+      "label": "Southern Atlantic Coastal Plain Mesic Hardwood Forest"
+    },
+    "121": {
+      "class": "cliff_rock",
+      "label": "East Gulf Coastal Plain Northern Loess Bluff Forest"
+    },
+    "122": {
+      "class": "dense_deciduous_forest",
+      "label": "East Gulf Coastal Plain Northern Mesic Hardwood Forest"
+    },
+    "123": {
+      "class": "dense_deciduous_forest",
+      "label": "North-Central Interior Beech-Maple Forest"
+    },
+    "124": {
+      "class": "dense_deciduous_forest",
+      "label": "North-Central Interior Maple-Basswood Forest"
+    },
+    "125": {
+      "class": "dense_deciduous_forest",
+      "label": "Ozark-Ouachita Mesic Hardwood Forest"
+    },
+    "126": {
+      "class": "dense_deciduous_forest",
+      "label": "South-Central Interior Mesophytic Forest"
+    },
+    "127": {
+      "class": "dense_deciduous_forest",
+      "label": "Southern and Central Appalachian Cove Forest"
+    },
+    "128": {
+      "class": "dense_deciduous_forest",
+      "label": "Crowley's Ridge Mesic Loess Slope Forest"
+    },
+    "129": {
+      "class": "dense_deciduous_forest",
+      "label": "Southern Piedmont Mesic Forest"
+    },
+    "130": {
+      "class": "barren",
+      "label": "Appalachian Shale Barrens"
+    },
+    "131": {
+      "class": "open_deciduous_forest",
+      "label": "Atlantic Coastal Plain Northern Maritime Forest"
+    },
+    "132": {
+      "class": "open_coniferous_forest",
+      "label": "Laurentian Pine-Oak Barrens"
+    },
+    "133": {
+      "class": "barren",
+      "label": "Northeastern Interior Pine Barrens"
+    },
+    "134": {
+      "class": "barren",
+      "label": "Northern Atlantic Coastal Plain Pitch Pine Barrens"
+    },
+    "135": {
+      "class": "open_coniferous_forest",
+      "label": "Southern Appalachian Montane Pine Forest and Woodland"
+    },
+    "136": {
+      "class": "dense_deciduous_forest",
+      "label": "East Cascades Mesic Montane Mixed-Conifer Forest and Woodland"
+    },
+    "137": {
+      "class": "open_coniferous_forest",
+      "label": "Middle Rocky Mountain Montane Douglas-fir Forest and Woodland"
+    },
+    "138": {
+      "class": "dense_deciduous_forest",
+      "label": "Northern Rocky Mountain Dry-Mesic Montane Mixed Conifer Forest"
+    },
+    "139": {
+      "class": "grassland",
+      "label": "Northern Rocky Mountain Foothill Conifer Wooded Steppe"
+    },
+    "140": {
+      "class": "dense_deciduous_forest",
+      "label": "Northern Rocky Mountain Mesic Montane Mixed Conifer Forest"
+    },
+    "141": {
+      "class": "open_coniferous_forest",
+      "label": "Northern Rocky Mountain Ponderosa Pine Woodland and Savanna"
+    },
+    "142": {
+      "class": "open_woodland",
+      "label": "Northern Rocky Mountain Western Larch Savanna"
+    },
+    "143": {
+      "class": "open_coniferous_forest",
+      "label": "Northwestern Great Plains - Black Hills Ponderosa Pine Woodland and Savanna"
+    },
+    "144": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Rocky Mountain Foothill Limber Pine-Juniper Woodland"
+    },
+    "145": {
+      "class": "open_coniferous_forest",
+      "label": "Inter-Mountain Basins Aspen-Mixed Conifer Forest and Woodland"
+    },
+    "146": {
+      "class": "dense_coniferous_forest",
+      "label": "Inter-Mountain Basins Subalpine Limber-Bristlecone Pine Woodland"
+    },
+    "147": {
+      "class": "dense_coniferous_forest",
+      "label": "Northern Rocky Mountain Subalpine Woodland and Parkland"
+    },
+    "148": {
+      "class": "open_deciduous_forest",
+      "label": "Rocky Mountain Aspen Forest and Woodland"
+    },
+    "149": {
+      "class": "open_coniferous_forest",
+      "label": "Rocky Mountain Lodgepole Pine Forest"
+    },
+    "150": {
+      "class": "open_coniferous_forest",
+      "label": "Rocky Mountain Poor-Site Lodgepole Pine Forest"
+    },
+    "151": {
+      "class": "dense_coniferous_forest",
+      "label": "Rocky Mountain Subalpine Dry-Mesic Spruce-Fir Forest and Woodland"
+    },
+    "152": {
+      "class": "dense_coniferous_forest",
+      "label": "Rocky Mountain Subalpine Mesic Spruce-Fir Forest and Woodland"
+    },
+    "153": {
+      "class": "dense_coniferous_forest",
+      "label": "Rocky Mountain Subalpine-Montane Limber-Bristlecone Pine Woodland"
+    },
+    "154": {
+      "class": "open_woodland",
+      "label": "Rocky Mountain Bigtooth Maple Ravine Woodland"
+    },
+    "155": {
+      "class": "dense_deciduous_forest",
+      "label": "Southern Rocky Mountain Dry-Mesic Montane Mixed Conifer Forest and Woodland"
+    },
+    "156": {
+      "class": "dense_deciduous_forest",
+      "label": "Southern Rocky Mountain Mesic Montane Mixed Conifer Forest and Woodland"
+    },
+    "157": {
+      "class": "open_coniferous_forest",
+      "label": "Southern Rocky Mountain Ponderosa Pine Savanna"
+    },
+    "158": {
+      "class": "open_coniferous_forest",
+      "label": "Southern Rocky Mountain Ponderosa Pine Woodland"
+    },
+    "159": {
+      "class": "open_coniferous_forest",
+      "label": "California Montane Jeffrey Pine-(Ponderosa Pine) Woodland"
+    },
+    "160": {
+      "class": "open_coniferous_forest",
+      "label": "Klamath-Siskiyou Lower Montane Serpentine Mixed Conifer Woodland"
+    },
+    "161": {
+      "class": "open_coniferous_forest",
+      "label": "Klamath-Siskiyou Upper Montane Serpentine Mixed Conifer Woodland"
+    },
+    "162": {
+      "class": "dense_deciduous_forest",
+      "label": "Mediterranean California Dry-Mesic Mixed Conifer Forest and Woodland"
+    },
+    "163": {
+      "class": "dense_deciduous_forest",
+      "label": "Mediterranean California Mesic Mixed Conifer Forest and Woodland"
+    },
+    "164": {
+      "class": "open_woodland",
+      "label": "Sierran-Intermontane Desert Western White Pine-White Fir Woodland"
+    },
+    "165": {
+      "class": "dense_coniferous_forest",
+      "label": "California Coastal Redwood Forest"
+    },
+    "166": {
+      "class": "shrubland",
+      "label": "North Pacific Broadleaf Landslide Forest and Shrubland"
+    },
+    "167": {
+      "class": "dense_coniferous_forest",
+      "label": "North Pacific Dry-Mesic Silver Fir-Western Hemlock-Douglas-fir Forest"
+    },
+    "168": {
+      "class": "open_deciduous_forest",
+      "label": "North Pacific Hypermaritime Sitka Spruce Forest"
+    },
+    "169": {
+      "class": "dense_coniferous_forest",
+      "label": "North Pacific Hypermaritime Western Red-cedar-Western Hemlock Forest"
+    },
+    "170": {
+      "class": "open_coniferous_forest",
+      "label": "North Pacific Lowland Mixed Hardwood-Conifer Forest and Woodland"
+    },
+    "171": {
+      "class": "dense_coniferous_forest",
+      "label": "North Pacific Maritime Dry-Mesic Douglas-fir-Western Hemlock Forest"
+    },
+    "172": {
+      "class": "dense_coniferous_forest",
+      "label": "North Pacific Maritime Mesic-Wet Douglas-fir-Western Hemlock Forest"
+    },
+    "173": {
+      "class": "dense_coniferous_forest",
+      "label": "North Pacific Mesic Western Hemlock-Silver Fir Forest"
+    },
+    "174": {
+      "class": "unknown",
+      "label": "North Pacific Wooded Volcanic Flowage"
+    },
+    "175": {
+      "class": "open_deciduous_forest",
+      "label": "Mediterranean California Red Fir Forest"
+    },
+    "176": {
+      "class": "dense_coniferous_forest",
+      "label": "Mediterranean California Subalpine Woodland"
+    },
+    "177": {
+      "class": "unknown",
+      "label": "North Pacific Maritime Mesic Subalpine Parkland"
+    },
+    "178": {
+      "class": "dense_coniferous_forest",
+      "label": "North Pacific Mountain Hemlock Forest"
+    },
+    "179": {
+      "class": "dense_coniferous_forest",
+      "label": "Northern California Mesic Subalpine Woodland"
+    },
+    "180": {
+      "class": "dense_coniferous_forest",
+      "label": "Northern Pacific Mesic Subalpine Woodland"
+    },
+    "181": {
+      "class": "dense_coniferous_forest",
+      "label": "Sierra Nevada Subalpine Lodgepole Pine Forest and Woodland"
+    },
+    "182": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Columbia Plateau Western Juniper Woodland and Savanna"
+    },
+    "183": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Great Basin Pinyon-Juniper Woodland"
+    },
+    "184": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Inter-Mountain Basins Curl-leaf Mountain Mahogany Woodland and Shrubland"
+    },
+    "185": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Inter-Mountain Basins Juniper Savanna"
+    },
+    "186": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Colorado Plateau Pinyon-Juniper Shrubland"
+    },
+    "187": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Colorado Plateau Pinyon-Juniper Woodland"
+    },
+    "188": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Southern Rocky Mountain Juniper Woodland and Savanna"
+    },
+    "189": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Southern Rocky Mountain Pinyon-Juniper Woodland"
+    },
+    "190": {
+      "class": "riparian_forest",
+      "label": "Northwestern Great Plains Floodplain"
+    },
+    "191": {
+      "class": "riparian_forest",
+      "label": "Northwestern Great Plains Riparian"
+    },
+    "192": {
+      "class": "riparian_forest",
+      "label": "Western Great Plains Floodplain"
+    },
+    "193": {
+      "class": "riparian_forest",
+      "label": "Western Great Plains Floodplain Systems"
+    },
+    "194": {
+      "class": "riparian_forest",
+      "label": "Western Great Plains Riparian Woodland and Shrubland"
+    },
+    "195": {
+      "class": "riparian_forest",
+      "label": "Central Appalachian Floodplain - Forest Modifier"
+    },
+    "196": {
+      "class": "riparian_forest",
+      "label": "Central Appalachian Riparian - Forest Modifier"
+    },
+    "197": {
+      "class": "riparian_forest",
+      "label": "Central Interior and Appalachian Floodplain Systems"
+    },
+    "198": {
+      "class": "riparian_forest",
+      "label": "Central Interior and Appalachian Riparian Systems"
+    },
+    "199": {
+      "class": "riparian_forest",
+      "label": "Laurentian-Acadian Floodplain Systems"
+    },
+    "200": {
+      "class": "riparian_forest",
+      "label": "Ozark-Ouachita Riparian"
+    },
+    "201": {
+      "class": "riparian_forest",
+      "label": "South-Central Interior Large Floodplain"
+    },
+    "202": {
+      "class": "riparian_forest",
+      "label": "South-Central Interior Large Floodplain - Forest Modifier"
+    },
+    "203": {
+      "class": "riparian_forest",
+      "label": "South-Central Interior Small Stream and Riparian"
+    },
+    "204": {
+      "class": "swamp",
+      "label": "North-Central Interior and Appalachian Rich Swamp"
+    },
+    "205": {
+      "class": "unmapped",
+      "label": "Unmapped 2"
+    },
+    "206": {
+      "class": "unmapped",
+      "label": "Unmapped 3"
+    },
+    "207": {
+      "class": "swamp",
+      "label": "Laurentian-Acadian Swamp Systems"
+    },
+    "208": {
+      "class": "wet_flatwoods",
+      "label": "North-Central Interior Wet Flatwoods"
+    },
+    "209": {
+      "class": "unmapped",
+      "label": "Unmapped 4"
+    },
+    "210": {
+      "class": "wet_flatwoods",
+      "label": "South-Central Interior / Upper Coastal Plain Wet Flatwoods"
+    },
+    "211": {
+      "class": "unmapped",
+      "label": "Unmapped 5"
+    },
+    "212": {
+      "class": "swamp",
+      "label": "Southern Piedmont/Ridge and Valley Upland Depression Swamp"
+    },
+    "213": {
+      "class": "riparian_forest",
+      "label": "Atlantic Coastal Plain Blackwater Stream Floodplain Forest - Forest Modifier"
+    },
+    "214": {
+      "class": "riparian_forest",
+      "label": "Atlantic Coastal Plain Brownwater Stream Floodplain Forest"
+    },
+    "215": {
+      "class": "swamp",
+      "label": "Atlantic Coastal Plain Northern Tidal Wooded Swamp"
+    },
+    "216": {
+      "class": "riparian_forest",
+      "label": "Atlantic Coastal Plain Small Blackwater River Floodplain Forest"
+    },
+    "217": {
+      "class": "riparian_forest",
+      "label": "Atlantic Coastal Plain Small Brownwater River Floodplain Forest"
+    },
+    "218": {
+      "class": "swamp",
+      "label": "Atlantic Coastal Plain Southern Tidal Wooded Swamp"
+    },
+    "219": {
+      "class": "riparian_forest",
+      "label": "East Gulf Coastal Plain Large River Floodplain Forest - Forest Modifier"
+    },
+    "220": {
+      "class": "riparian_forest",
+      "label": "East Gulf Coastal Plain Small Stream and River Floodplain Forest"
+    },
+    "221": {
+      "class": "swamp",
+      "label": "East Gulf Coastal Plain Tidal Wooded Swamp"
+    },
+    "222": {
+      "class": "unmapped",
+      "label": "Unmapped 6"
+    },
+    "223": {
+      "class": "riparian_forest",
+      "label": "Southeastern Great Plains Riparian Forest"
+    },
+    "224": {
+      "class": "riparian_forest",
+      "label": "Southeastern Great Plains Floodplain Forest"
+    },
+    "225": {
+      "class": "riparian_forest",
+      "label": "Mississippi River Bottomland Depression"
+    },
+    "226": {
+      "class": "riparian_forest",
+      "label": "Mississippi River Floodplain and Riparian Forest"
+    },
+    "227": {
+      "class": "riparian_forest",
+      "label": "Mississippi River Low Floodplain (Bottomland) Forest"
+    },
+    "228": {
+      "class": "riparian_forest",
+      "label": "Mississippi River Riparian Forest"
+    },
+    "229": {
+      "class": "riparian_forest",
+      "label": "Red River Large Floodplain Forest"
+    },
+    "230": {
+      "class": "riparian_forest",
+      "label": "Southern Coastal Plain Blackwater River Floodplain Forest"
+    },
+    "231": {
+      "class": "riparian_forest",
+      "label": "Southern Piedmont Large Floodplain Forest - Forest Modifier"
+    },
+    "232": {
+      "class": "riparian_forest",
+      "label": "Southern Piedmont Small Floodplain and Riparian Forest"
+    },
+    "233": {
+      "class": "riparian_forest",
+      "label": "West Gulf Coastal Plain Large River Floodplain Forest"
+    },
+    "234": {
+      "class": "swamp",
+      "label": "West Gulf Coastal Plain Near-Coast Large River Swamp"
+    },
+    "235": {
+      "class": "open_deciduous_forest",
+      "label": "West Gulf Coastal Plain Small Stream and River Forest"
+    },
+    "236": {
+      "class": "swamp",
+      "label": "Atlantic Coastal Plain Streamhead Seepage Swamp - Pocosin - and Baygall"
+    },
+    "237": {
+      "class": "swamp",
+      "label": "Gulf and Atlantic Coastal Plain Swamp Systems"
+    },
+    "238": {
+      "class": "unknown",
+      "label": "Southern Coastal Plain Hydric Hammock"
+    },
+    "239": {
+      "class": "swamp",
+      "label": "Southern Coastal Plain Seepage Swamp and Baygall"
+    },
+    "240": {
+      "class": "swamp",
+      "label": "West Gulf Coastal Plain Seepage Swamp and Baygall"
+    },
+    "241": {
+      "class": "swamp",
+      "label": "Atlantic Coastal Plain Nonriverine Swamp and Wet Hardwood Forest - Taxodium/Nyssa Modifier"
+    },
+    "242": {
+      "class": "swamp",
+      "label": "Atlantic Coastal Plain Nonriverine Swamp and Wet Hardwood Forest - Oak Dominated Modifier"
+    },
+    "243": {
+      "class": "wet_flatwoods",
+      "label": "East Gulf Coastal Plain Southern Loblolly-Hardwood Flatwoods"
+    },
+    "244": {
+      "class": "riparian_forest",
+      "label": "Lower Mississippi River Bottomland Depressions - Forest Modifier"
+    },
+    "245": {
+      "class": "wet_flatwoods",
+      "label": "Lower Mississippi River Flatwoods"
+    },
+    "246": {
+      "class": "swamp",
+      "label": "Northern Atlantic Coastal Plain Basin Swamp and Wet Hardwood Forest"
+    },
+    "247": {
+      "class": "swamp",
+      "label": "Southern Coastal Plain Nonriverine Basin Swamp"
+    },
+    "248": {
+      "class": "swamp",
+      "label": "Southern Coastal Plain Nonriverine Basin Swamp - Okefenokee Bay/Gum Modifier"
+    },
+    "249": {
+      "class": "swamp",
+      "label": "Southern Coastal Plain Nonriverine Basin Swamp - Okefenokee Pine Modifier"
+    },
+    "250": {
+      "class": "swamp",
+      "label": "Southern Coastal Plain Nonriverine Basin Swamp - Okefenokee Taxodium Modifier"
+    },
+    "251": {
+      "class": "wet_flatwoods",
+      "label": "West Gulf Coastal Plain Nonriverine Wet Hardwood Flatwoods"
+    },
+    "252": {
+      "class": "wet_flatwoods",
+      "label": "West Gulf Coastal Plain Pine-Hardwood Flatwoods"
+    },
+    "253": {
+      "class": "riparian_forest",
+      "label": "Edwards Plateau Riparian"
+    },
+    "254": {
+      "class": "wetland",
+      "label": "Atlantic Coastal Plain Clay-Based Carolina Bay Forested Wetland"
+    },
+    "255": {
+      "class": "wetland",
+      "label": "Atlantic Coastal Plain Clay-Based Carolina Bay Herbaceous Wetland"
+    },
+    "256": {
+      "class": "open_woodland",
+      "label": "Atlantic Coastal Plain Southern Wet Pine Savanna and Flatwoods"
+    },
+    "257": {
+      "class": "open_woodland",
+      "label": "Central Atlantic Coastal Plain Wet Longleaf Pine Savanna and Flatwoods"
+    },
+    "258": {
+      "class": "wet_flatwoods",
+      "label": "Central Florida Pine Flatwoods"
+    },
+    "259": {
+      "class": "wet_flatwoods",
+      "label": "East Gulf Coastal Plain Near-Coast Pine Flatwoods"
+    },
+    "260": {
+      "class": "wet_flatwoods",
+      "label": "East Gulf Coastal Plain Near-Coast Pine Flatwoods - Open Understory Modifier"
+    },
+    "261": {
+      "class": "shrubland",
+      "label": "East Gulf Coastal Plain Near-Coast Pine Flatwoods - Scrub/Shrub Understory Modifier"
+    },
+    "262": {
+      "class": "wet_flatwoods",
+      "label": "South Florida Pine Flatwoods"
+    },
+    "263": {
+      "class": "unknown",
+      "label": "Southern Coastal Plain Nonriverine Cypress Dome"
+    },
+    "264": {
+      "class": "open_woodland",
+      "label": "West Gulf Coastal Plain Wet Longleaf Pine Savanna and Flatwoods"
+    },
+    "265": {
+      "class": "riparian_forest",
+      "label": "Columbia Basin Foothill Riparian Woodland and Shrubland"
+    },
+    "266": {
+      "class": "riparian_forest",
+      "label": "Great Basin Foothill and Lower Montane Riparian Woodland and Shrubland"
+    },
+    "267": {
+      "class": "unmapped",
+      "label": "Unmapped 7"
+    },
+    "268": {
+      "class": "swamp",
+      "label": "Northern Rocky Mountain Conifer Swamp"
+    },
+    "269": {
+      "class": "riparian_forest",
+      "label": "Northern Rocky Mountain Lower Montane Riparian Woodland and Shrubland"
+    },
+    "270": {
+      "class": "riparian_forest",
+      "label": "Rocky Mountain Lower Montane Riparian Woodland and Shrubland"
+    },
+    "271": {
+      "class": "riparian_forest",
+      "label": "Rocky Mountain Montane Riparian Systems"
+    },
+    "272": {
+      "class": "riparian_forest",
+      "label": "Rocky Mountain Subalpine-Montane Riparian Woodland"
+    },
+    "273": {
+      "class": "swamp",
+      "label": "North Pacific Hardwood-Conifer Swamp"
+    },
+    "274": {
+      "class": "riparian_forest",
+      "label": "North Pacific Lowland Riparian Forest and Shrubland"
+    },
+    "275": {
+      "class": "riparian_forest",
+      "label": "North Pacific Montane Riparian Woodland and Shrubland"
+    },
+    "276": {
+      "class": "swamp",
+      "label": "North Pacific Shrub Swamp"
+    },
+    "277": {
+      "class": "riparian_forest",
+      "label": "California Central Valley Riparian Woodland and Shrubland"
+    },
+    "278": {
+      "class": "riparian_forest",
+      "label": "Mediterranean California Foothill and Lower Montane Riparian Woodland"
+    },
+    "279": {
+      "class": "wetland",
+      "label": "Mediterranean California Serpentine Foothill and Lower Montane Riparian Woodland and Seep"
+    },
+    "280": {
+      "class": "riparian_forest",
+      "label": "North American Warm Desert Lower Montane Riparian Woodland and Shrubland"
+    },
+    "281": {
+      "class": "riparian_forest",
+      "label": "North American Warm Desert Riparian Systems"
+    },
+    "282": {
+      "class": "riparian_forest",
+      "label": "North American Warm Desert Riparian Woodland and Shrubland"
+    },
+    "283": {
+      "class": "riparian_forest",
+      "label": "Tamaulipan Floodplain"
+    },
+    "284": {
+      "class": "riparian_forest",
+      "label": "Tamaulipan Riparian Systems"
+    },
+    "285": {
+      "class": "open_deciduous_forest",
+      "label": "Boreal Aspen-Birch Forest"
+    },
+    "286": {
+      "class": "dense_coniferous_forest",
+      "label": "Boreal Jack Pine-Black Spruce Forest"
+    },
+    "287": {
+      "class": "dense_coniferous_forest",
+      "label": "Boreal White Spruce-Fir-Hardwood Forest"
+    },
+    "288": {
+      "class": "swamp",
+      "label": "Boreal-Laurentian Conifer Acidic Swamp and Treed Poor Fen"
+    },
+    "289": {
+      "class": "riparian_forest",
+      "label": "Eastern Boreal Floodplain"
+    },
+    "290": {
+      "class": "beach",
+      "label": "South Florida Shell Hash Beach"
+    },
+    "291": {
+      "class": "beach",
+      "label": "Southeast Florida Beach"
+    },
+    "292": {
+      "class": "beach",
+      "label": "Southwest Florida Beach"
+    },
+    "293": {
+      "class": "marsh",
+      "label": "South Florida Everglades Sawgrass Marsh"
+    },
+    "294": {
+      "class": "wetland",
+      "label": "South Florida Freshwater Slough and Gator Hole"
+    },
+    "295": {
+      "class": "grassland",
+      "label": "South Florida Wet Marl Prairie"
+    },
+    "296": {
+      "class": "chaparral",
+      "label": "California Maritime Chaparral"
+    },
+    "297": {
+      "class": "chaparral",
+      "label": "California Mesic Chaparral"
+    },
+    "298": {
+      "class": "chaparral",
+      "label": "California Xeric Serpentine Chaparral"
+    },
+    "299": {
+      "class": "chaparral",
+      "label": "Klamath-Siskiyou Xeromorphic Serpentine Savanna and Chaparral"
+    },
+    "300": {
+      "class": "chaparral",
+      "label": "Mediterranean California Mesic Serpentine Woodland and Chaparral"
+    },
+    "301": {
+      "class": "chaparral",
+      "label": "Northern and Central California Dry-Mesic Chaparral"
+    },
+    "302": {
+      "class": "chaparral",
+      "label": "Southern California Dry-Mesic Chaparral"
+    },
+    "303": {
+      "class": "coastal_scrub",
+      "label": "Southern California Coastal Scrub"
+    },
+    "304": {
+      "class": "coastal_dune",
+      "label": "California Central Valley and Southern Coastal Grassland"
+    },
+    "305": {
+      "class": "grassland",
+      "label": "California Mesic Serpentine Grassland"
+    },
+    "306": {
+      "class": "grassland",
+      "label": "Columbia Basin Foothill and Canyon Dry Grassland"
+    },
+    "307": {
+      "class": "grassland",
+      "label": "Columbia Basin Palouse Prairie"
+    },
+    "308": {
+      "class": "grassland",
+      "label": "North Pacific Alpine and Subalpine Dry Grassland"
+    },
+    "309": {
+      "class": "grassland",
+      "label": "North Pacific Montane Grassland"
+    },
+    "310": {
+      "class": "shrubland",
+      "label": "North Pacific Montane Shrubland"
+    },
+    "311": {
+      "class": "grassland",
+      "label": "Northern Rocky Mountain Lower Montane, Foothill and Valley Grassland"
+    },
+    "312": {
+      "class": "shrubland",
+      "label": "Northern Rocky Mountain Montane-Foothill Deciduous Shrubland"
+    },
+    "313": {
+      "class": "shrubland",
+      "label": "Northern Rocky Mountain Subalpine Deciduous Shrubland"
+    },
+    "314": {
+      "class": "grassland",
+      "label": "Northern Rocky Mountain Subalpine-Upper Montane Grassland"
+    },
+    "315": {
+      "class": "grassland",
+      "label": "Southern Rocky Mountain Montane-Subalpine Grassland"
+    },
+    "316": {
+      "class": "shrubland",
+      "label": "Rocky Mountain Gambel Oak-Mixed Montane Shrubland"
+    },
+    "317": {
+      "class": "shrubland",
+      "label": "Rocky Mountain Lower Montane-Foothill Shrubland"
+    },
+    "318": {
+      "class": "coastal_dune",
+      "label": "California Northern Coastal Grassland"
+    },
+    "319": {
+      "class": "cliff_rock",
+      "label": "North Pacific Herbaceous Bald and Bluff"
+    },
+    "320": {
+      "class": "grassland",
+      "label": "North Pacific Hypermaritime Shrub and Herbaceous Headland"
+    },
+    "321": {
+      "class": "open_woodland",
+      "label": "Willamette Valley Upland Prairie and Savanna"
+    },
+    "322": {
+      "class": "grassland",
+      "label": "Mediterranean California Subalpine Meadow"
+    },
+    "323": {
+      "class": "grassland",
+      "label": "Rocky Mountain Subalpine-Montane Mesic Meadow"
+    },
+    "324": {
+      "class": "grassland",
+      "label": "Central Mixedgrass Prairie"
+    },
+    "325": {
+      "class": "grassland",
+      "label": "Northwestern Great Plains Mixedgrass Prairie"
+    },
+    "326": {
+      "class": "grassland",
+      "label": "Western Great Plains Foothill and Piedmont Grassland"
+    },
+    "327": {
+      "class": "grassland",
+      "label": "Western Great Plains Tallgrass Prairie"
+    },
+    "328": {
+      "class": "grassland",
+      "label": "Western Great Plains Sand Prairie"
+    },
+    "329": {
+      "class": "grassland",
+      "label": "Western Great Plains Sandhill Steppe"
+    },
+    "330": {
+      "class": "open_woodland",
+      "label": "Western Great Plains Mesquite Woodland and Shrubland"
+    },
+    "331": {
+      "class": "grassland",
+      "label": "Western Great Plains Shortgrass Prairie"
+    },
+    "332": {
+      "class": "open_woodland",
+      "label": "Arkansas Valley Prairie and Woodland"
+    },
+    "333": {
+      "class": "grassland",
+      "label": "Central Tallgrass Prairie"
+    },
+    "334": {
+      "class": "open_woodland",
+      "label": "North-Central Interior Oak Savanna"
+    },
+    "335": {
+      "class": "grassland",
+      "label": "North-Central Interior Sand and Gravel Tallgrass Prairie"
+    },
+    "336": {
+      "class": "barren",
+      "label": "North-Central Oak Barrens"
+    },
+    "337": {
+      "class": "grassland",
+      "label": "Northern Tallgrass Prairie"
+    },
+    "338": {
+      "class": "grassland",
+      "label": "Southeastern Great Plains Tallgrass Prairie"
+    },
+    "339": {
+      "class": "grassland",
+      "label": "Texas Blackland Tallgrass Prairie"
+    },
+    "340": {
+      "class": "grassland",
+      "label": "Texas-Louisiana Coastal Prairie"
+    },
+    "341": {
+      "class": "open_coniferous_forest",
+      "label": "Central Appalachian Pine-Oak Rocky Woodland"
+    },
+    "342": {
+      "class": "grassland",
+      "label": "Southern Appalachian Grass and Shrub Bald"
+    },
+    "343": {
+      "class": "grassland",
+      "label": "Southern Appalachian Grass and Shrub Bald - Herbaceous Modifier"
+    },
+    "344": {
+      "class": "grassland",
+      "label": "Southern Appalachian Grass and Shrub Bald - Shrub Modifier"
+    },
+    "345": {
+      "class": "open_woodland",
+      "label": "Central Appalachian Alkaline Glade and Woodland"
+    },
+    "346": {
+      "class": "barren",
+      "label": "Central Interior Highlands Calcareous Glade and Barrens"
+    },
+    "347": {
+      "class": "barren",
+      "label": "Central Interior Highlands Dry Acidic Glade and Barrens"
+    },
+    "348": {
+      "class": "barren",
+      "label": "Cumberland Sandstone Glade and Barrens"
+    },
+    "349": {
+      "class": "unknown",
+      "label": "Great Lakes Alvar"
+    },
+    "350": {
+      "class": "barren",
+      "label": "Nashville Basin Limestone Glade"
+    },
+    "351": {
+      "class": "open_deciduous_forest",
+      "label": "Southern Ridge and Valley / Cumberland Dry Calcareous Forest"
+    },
+    "352": {
+      "class": "barren",
+      "label": "Southern Piedmont Glade and Barrens"
+    },
+    "353": {
+      "class": "open_woodland",
+      "label": "East Gulf Coastal Plain Black Belt Calcareous Prairie and Woodland - Herbaceous Modifier"
+    },
+    "354": {
+      "class": "open_woodland",
+      "label": "East Gulf Coastal Plain Jackson Prairie and Woodland"
+    },
+    "355": {
+      "class": "grassland",
+      "label": "Eastern Highland Rim Prairie and Barrens - Dry Modifier"
+    },
+    "356": {
+      "class": "chaparral",
+      "label": "Coahuilan Chaparral"
+    },
+    "357": {
+      "class": "chaparral",
+      "label": "Madrean Oriental Chaparral"
+    },
+    "358": {
+      "class": "chaparral",
+      "label": "Mogollon Chaparral"
+    },
+    "359": {
+      "class": "semi_desert_shrub",
+      "label": "Sonora-Mojave Semi-Desert Chaparral"
+    },
+    "360": {
+      "class": "chaparral",
+      "label": "California Montane Woodland and Chaparral"
+    },
+    "361": {
+      "class": "semi_desert_shrub",
+      "label": "Great Basin Semi-Desert Chaparral"
+    },
+    "362": {
+      "class": "grassland",
+      "label": "Florida Dry Prairie"
+    },
+    "363": {
+      "class": "shrubland",
+      "label": "Florida Peninsula Inland Scrub"
+    },
+    "364": {
+      "class": "barren",
+      "label": "West Gulf Coastal Plain Catahoula Barrens"
+    },
+    "365": {
+      "class": "barren",
+      "label": "West Gulf Coastal Plain Nepheline Syenite Glade"
+    },
+    "366": {
+      "class": "wet_flatwoods",
+      "label": "East Gulf Coastal Plain Jackson Plain Dry Flatwoods - Open Understory Modifier"
+    },
+    "367": {
+      "class": "grassland",
+      "label": "West Gulf Coastal Plain Northern Calcareous Prairie"
+    },
+    "368": {
+      "class": "grassland",
+      "label": "West Gulf Coastal Plain Southern Calcareous Prairie"
+    },
+    "369": {
+      "class": "alpine_tundra",
+      "label": "Acadian-Appalachian Subalpine Woodland and Heath-Krummholz"
+    },
+    "370": {
+      "class": "wetland",
+      "label": "Atlantic and Gulf Coastal Plain Interdunal Wetland"
+    },
+    "371": {
+      "class": "coastal_dune",
+      "label": "Atlantic Coastal Plain Southern Dune and Maritime Grassland"
+    },
+    "372": {
+      "class": "coastal_dune",
+      "label": "Central and Upper Texas Coast Dune and Coastal Grassland"
+    },
+    "373": {
+      "class": "coastal_dune",
+      "label": "East Gulf Coastal Plain Dune and Coastal Grassland"
+    },
+    "374": {
+      "class": "coastal_dune",
+      "label": "Great Lakes Dune"
+    },
+    "375": {
+      "class": "coastal_dune",
+      "label": "Northern Atlantic Coastal Plain Dune and Swale"
+    },
+    "376": {
+      "class": "coastal_dune",
+      "label": "Northern Atlantic Coastal Plain Heathland and Grassland"
+    },
+    "377": {
+      "class": "coastal_dune",
+      "label": "South Texas Dune and Coastal Grassland"
+    },
+    "378": {
+      "class": "grassland",
+      "label": "South Texas Sand Sheet Grassland"
+    },
+    "379": {
+      "class": "coastal_dune",
+      "label": "Southwest Florida Dune and Coastal Grassland"
+    },
+    "380": {
+      "class": "cliff_rock",
+      "label": "North Pacific Coastal Cliff and Bluff"
+    },
+    "381": {
+      "class": "coastal_dune",
+      "label": "North Pacific Maritime Coastal Sand Dune and Strand"
+    },
+    "382": {
+      "class": "coastal_scrub",
+      "label": "Northern California Coastal Scrub"
+    },
+    "383": {
+      "class": "cliff_rock",
+      "label": "Mediterranean California Coastal Bluff"
+    },
+    "384": {
+      "class": "coastal_dune",
+      "label": "Mediterranean California Northern Coastal Dune"
+    },
+    "385": {
+      "class": "coastal_dune",
+      "label": "Mediterranean California Southern Coastal Dune"
+    },
+    "386": {
+      "class": "beach",
+      "label": "Atlantic Coastal Plain Northern Sandy Beach"
+    },
+    "387": {
+      "class": "beach",
+      "label": "Atlantic Coastal Plain Sea Island Beach"
+    },
+    "388": {
+      "class": "beach",
+      "label": "Atlantic Coastal Plain Southern Beach"
+    },
+    "389": {
+      "class": "beach",
+      "label": "Florida Panhandle Beach Vegetation"
+    },
+    "390": {
+      "class": "beach",
+      "label": "Louisiana Beach"
+    },
+    "391": {
+      "class": "beach",
+      "label": "Northern Atlantic Coastal Plain Sandy Beach"
+    },
+    "392": {
+      "class": "beach",
+      "label": "Texas Coastal Bend Beach"
+    },
+    "393": {
+      "class": "beach",
+      "label": "Upper Texas Coast Beach"
+    },
+    "394": {
+      "class": "unmapped",
+      "label": "Unmapped 8"
+    },
+    "395": {
+      "class": "swamp",
+      "label": "Mediterranean California Serpentine Fen"
+    },
+    "396": {
+      "class": "swamp",
+      "label": "Mediterranean California Subalpine-Montane Fen"
+    },
+    "397": {
+      "class": "swamp",
+      "label": "North Pacific Bog and Fen"
+    },
+    "398": {
+      "class": "swamp",
+      "label": "Rocky Mountain Subalpine-Montane Fen"
+    },
+    "399": {
+      "class": "swamp",
+      "label": "Atlantic Coastal Plain Peatland Pocosin"
+    },
+    "400": {
+      "class": "swamp",
+      "label": "Southern and Central Appalachian Bog and Fen"
+    },
+    "401": {
+      "class": "marsh",
+      "label": "Atlantic Coastal Plain Central Fresh-Oligohaline Tidal Marsh"
+    },
+    "402": {
+      "class": "marsh",
+      "label": "Atlantic Coastal Plain Embayed Region Tidal Freshwater Marsh"
+    },
+    "403": {
+      "class": "marsh",
+      "label": "Atlantic Coastal Plain Northern Fresh and Oligohaline Tidal Marsh"
+    },
+    "404": {
+      "class": "marsh",
+      "label": "Florida Big Bend Fresh-Oligohaline Tidal Marsh"
+    },
+    "405": {
+      "class": "wetland",
+      "label": "Atlantic Coastal Plain Depression Pondshore"
+    },
+    "406": {
+      "class": "unknown",
+      "label": "Atlantic Coastal Plain Large Natural Lakeshore"
+    },
+    "407": {
+      "class": "wetland",
+      "label": "Central Florida Herbaceous Pondshore"
+    },
+    "408": {
+      "class": "wetland",
+      "label": "Central Florida Herbaceous Seep"
+    },
+    "409": {
+      "class": "wetland",
+      "label": "East Gulf Coastal Plain Savanna and Wet Prairie"
+    },
+    "410": {
+      "class": "wetland",
+      "label": "East Gulf Coastal Plain Depression Pondshore"
+    },
+    "411": {
+      "class": "marsh",
+      "label": "Floridian Highlands Freshwater Marsh"
+    },
+    "412": {
+      "class": "swamp",
+      "label": "Southern Coastal Plain Herbaceous Seepage Bog"
+    },
+    "413": {
+      "class": "swamp",
+      "label": "Southern Coastal Plain Nonriverine Basin Swamp - Okefenokee Clethra Modifier"
+    },
+    "414": {
+      "class": "swamp",
+      "label": "Southern Coastal Plain Nonriverine Basin Swamp - Okefenokee Nupea Modifier"
+    },
+    "415": {
+      "class": "wetland",
+      "label": "Texas-Louisiana Coastal Prairie Slough"
+    },
+    "416": {
+      "class": "wetland",
+      "label": "Central Interior and Appalachian Shrub-Herbaceous Wetland Systems"
+    },
+    "417": {
+      "class": "marsh",
+      "label": "Great Lakes Coastal Marsh Systems"
+    },
+    "418": {
+      "class": "unmapped",
+      "label": "Unmapped 9"
+    },
+    "419": {
+      "class": "unmapped",
+      "label": "Unmapped 10"
+    },
+    "420": {
+      "class": "wetland",
+      "label": "Laurentian-Acadian Shrub-Herbaceous Wetland Systems"
+    },
+    "421": {
+      "class": "unmapped",
+      "label": "Unmapped 11"
+    },
+    "422": {
+      "class": "marsh",
+      "label": "Eastern Great Plains Wet Meadow, Prairie and Marsh"
+    },
+    "423": {
+      "class": "grassland",
+      "label": "Great Lakes Wet-Mesic Lakeplain Prairie"
+    },
+    "424": {
+      "class": "grassland",
+      "label": "Great Plains Prairie Pothole"
+    },
+    "425": {
+      "class": "wetland",
+      "label": "Western Great Plains Closed Depression Wetland"
+    },
+    "426": {
+      "class": "wetland",
+      "label": "Western Great Plains Depressional Wetland Systems"
+    },
+    "427": {
+      "class": "wetland",
+      "label": "Western Great Plains Open Freshwater Depression Wetland"
+    },
+    "428": {
+      "class": "riparian_forest",
+      "label": "Cumberland Riverscour"
+    },
+    "429": {
+      "class": "wetland",
+      "label": "Inter-Mountain Basins Interdunal Swale Wetland"
+    },
+    "430": {
+      "class": "shrubland",
+      "label": "North Pacific Avalanche Chute Shrubland"
+    },
+    "431": {
+      "class": "wetland",
+      "label": "North Pacific Intertidal Freshwater Wetland"
+    },
+    "432": {
+      "class": "marsh",
+      "label": "Temperate Pacific Freshwater Emergent Marsh"
+    },
+    "433": {
+      "class": "wetland",
+      "label": "Temperate Pacific Freshwater Mudflat"
+    },
+    "434": {
+      "class": "wetland",
+      "label": "Columbia Plateau Vernal Pool"
+    },
+    "435": {
+      "class": "wetland",
+      "label": "Northern California Claypan Vernal Pool"
+    },
+    "436": {
+      "class": "wetland",
+      "label": "Northern Rocky Mountain Wooded Vernal Pool"
+    },
+    "437": {
+      "class": "semi_desert_shrub",
+      "label": "Columbia Plateau Silver Sagebrush Seasonally Flooded Shrub-Steppe"
+    },
+    "438": {
+      "class": "wetland",
+      "label": "Rocky Mountain Alpine-Montane Wet Meadow"
+    },
+    "439": {
+      "class": "riparian_forest",
+      "label": "Rocky Mountain Subalpine-Montane Riparian Shrubland"
+    },
+    "440": {
+      "class": "wetland",
+      "label": "Temperate Pacific Montane Wet Meadow"
+    },
+    "441": {
+      "class": "wetland",
+      "label": "Willamette Valley Wet Prairie"
+    },
+    "442": {
+      "class": "riparian_forest",
+      "label": "Chihuahuan-Sonoran Desert Bottomland and Swale Grassland"
+    },
+    "443": {
+      "class": "marsh",
+      "label": "North American Arid West Emergent Marsh"
+    },
+    "444": {
+      "class": "riparian_forest",
+      "label": "North American Warm Desert Riparian Mesquite Bosque"
+    },
+    "445": {
+      "class": "wetland",
+      "label": "Western Great Plains Saline Depression Wetland"
+    },
+    "446": {
+      "class": "marsh",
+      "label": "Acadian Salt Marsh and Estuary Systems"
+    },
+    "447": {
+      "class": "marsh",
+      "label": "Atlantic Coastal Plain Central Salt and Brackish Tidal Marsh"
+    },
+    "448": {
+      "class": "marsh",
+      "label": "Atlantic Coastal Plain Embayed Region Tidal Salt and Brackish Marsh"
+    },
+    "449": {
+      "class": "marsh",
+      "label": "Atlantic Coastal Plain Indian River Lagoon Tidal Marsh"
+    },
+    "450": {
+      "class": "marsh",
+      "label": "Atlantic Coastal Plain Northern Tidal Salt Marsh"
+    },
+    "451": {
+      "class": "marsh",
+      "label": "Florida Big Bend Salt-Brackish Tidal Marsh"
+    },
+    "452": {
+      "class": "marsh",
+      "label": "Gulf and Atlantic Coastal Plain Tidal Marsh Systems"
+    },
+    "453": {
+      "class": "marsh",
+      "label": "Mississippi Sound Salt and Brackish Tidal Marsh"
+    },
+    "454": {
+      "class": "grassland",
+      "label": "Texas Saline Coastal Prairie"
+    },
+    "455": {
+      "class": "marsh",
+      "label": "Temperate Pacific Tidal Salt and Brackish Marsh"
+    },
+    "456": {
+      "class": "unknown",
+      "label": "Inter-Mountain Basins Alkaline Closed Depression"
+    },
+    "457": {
+      "class": "semi_desert_shrub",
+      "label": "Inter-Mountain Basins Greasewood Flat"
+    },
+    "458": {
+      "class": "desert_scrub",
+      "label": "Inter-Mountain Basins Playa"
+    },
+    "459": {
+      "class": "desert_scrub",
+      "label": "North American Warm Desert Playa"
+    },
+    "460": {
+      "class": "shrubland",
+      "label": "Apacherian-Chihuahuan Mesquite Upland Scrub"
+    },
+    "461": {
+      "class": "desert_scrub",
+      "label": "Apacherian-Chihuahuan Semi-Desert Grassland and Steppe"
+    },
+    "462": {
+      "class": "desert_scrub",
+      "label": "Chihuahuan Creosotebush, Mixed Desert and Thorn Scrub"
+    },
+    "463": {
+      "class": "grassland",
+      "label": "Chihuahuan Gypsophilous Grassland and Steppe"
+    },
+    "464": {
+      "class": "desert_scrub",
+      "label": "Chihuahuan Loamy Plains Desert Grassland"
+    },
+    "465": {
+      "class": "shrubland",
+      "label": "Chihuahuan Mixed Desert and Thorn Scrub"
+    },
+    "466": {
+      "class": "desert_scrub",
+      "label": "Chihuahuan Sandy Plains Semi-Desert Grassland"
+    },
+    "467": {
+      "class": "coastal_dune",
+      "label": "Chihuahuan Stabilized Coppice Dune and Sand Flat Scrub"
+    },
+    "468": {
+      "class": "desert_scrub",
+      "label": "Chihuahuan Succulent Desert Scrub"
+    },
+    "469": {
+      "class": "pinyon_juniper_woodland",
+      "label": "Madrean Juniper Savanna"
+    },
+    "470": {
+      "class": "desert_scrub",
+      "label": "Mojave Mid-Elevation Mixed Desert Scrub"
+    },
+    "471": {
+      "class": "coastal_dune",
+      "label": "North American Warm Desert Active and Stabilized Dune"
+    },
+    "472": {
+      "class": "desert_scrub",
+      "label": "Sonora-Mojave Creosotebush-White Bursage Desert Scrub"
+    },
+    "473": {
+      "class": "desert_scrub",
+      "label": "Sonoran Mid-Elevation Desert Scrub"
+    },
+    "474": {
+      "class": "desert_scrub",
+      "label": "Sonoran Paloverde-Mixed Cacti Desert Scrub"
+    },
+    "475": {
+      "class": "desert_scrub",
+      "label": "Chihuahuan Mixed Salt Desert Scrub"
+    },
+    "476": {
+      "class": "desert_scrub",
+      "label": "Sonora-Mojave Mixed Salt Desert Scrub"
+    },
+    "477": {
+      "class": "desert_scrub",
+      "label": "North American Warm Desert Wash"
+    },
+    "478": {
+      "class": "unknown",
+      "label": "South Texas Lomas"
+    },
+    "479": {
+      "class": "shrubland",
+      "label": "Tamaulipan Calcareous Thornscrub"
+    },
+    "480": {
+      "class": "grassland",
+      "label": "Tamaulipan Clay Grassland"
+    },
+    "481": {
+      "class": "shrubland",
+      "label": "Tamaulipan Mesquite Upland Scrub"
+    },
+    "482": {
+      "class": "shrubland",
+      "label": "Tamaulipan Mixed Deciduous Thornscrub"
+    },
+    "483": {
+      "class": "open_woodland",
+      "label": "Tamaulipan Savanna Grassland"
+    },
+    "484": {
+      "class": "semi_desert_shrub",
+      "label": "Inter-Mountain Basins Mat Saltbush Shrubland"
+    },
+    "485": {
+      "class": "desert_scrub",
+      "label": "Inter-Mountain Basins Mixed Salt Desert Scrub"
+    },
+    "486": {
+      "class": "unknown",
+      "label": "Inter-Mountain Basins Wash"
+    },
+    "487": {
+      "class": "grassland",
+      "label": "Columbia Plateau Steppe and Grassland"
+    },
+    "488": {
+      "class": "semi_desert_shrub",
+      "label": "Great Basin Xeric Mixed Sagebrush Shrubland"
+    },
+    "489": {
+      "class": "semi_desert_shrub",
+      "label": "Inter-Mountain Basins Big Sagebrush Shrubland"
+    },
+    "490": {
+      "class": "semi_desert_shrub",
+      "label": "Inter-Mountain Basins Big Sagebrush Steppe"
+    },
+    "491": {
+      "class": "semi_desert_shrub",
+      "label": "Inter-Mountain Basins Montane Sagebrush Steppe"
+    },
+    "492": {
+      "class": "semi_desert_shrub",
+      "label": "Colorado Plateau Mixed Low Sagebrush Shrubland"
+    },
+    "493": {
+      "class": "semi_desert_shrub",
+      "label": "Columbia Plateau Low Sagebrush Steppe"
+    },
+    "494": {
+      "class": "shrubland",
+      "label": "Columbia Plateau Scabland Shrubland"
+    },
+    "495": {
+      "class": "semi_desert_shrub",
+      "label": "Wyoming Basins Dwarf Sagebrush Shrubland and Steppe"
+    },
+    "496": {
+      "class": "semi_desert_shrub",
+      "label": "Colorado Plateau Blackbrush-Mormon-tea Shrubland"
+    },
+    "497": {
+      "class": "desert_scrub",
+      "label": "Inter-Mountain Basins Semi-Desert Grassland"
+    },
+    "498": {
+      "class": "semi_desert_shrub",
+      "label": "Inter-Mountain Basins Semi-Desert Shrub Steppe"
+    },
+    "499": {
+      "class": "shrubland",
+      "label": "Southern Colorado Plateau Sand Shrubland"
+    },
+    "500": {
+      "class": "alpine_tundra",
+      "label": "Acadian-Appalachian Alpine Tundra"
+    },
+    "501": {
+      "class": "alpine_tundra",
+      "label": "Rocky Mountain Alpine Dwarf-Shrubland"
+    },
+    "502": {
+      "class": "alpine_tundra",
+      "label": "Rocky Mountain Alpine Fell-Field"
+    },
+    "503": {
+      "class": "alpine_tundra",
+      "label": "Rocky Mountain Alpine Turf"
+    },
+    "504": {
+      "class": "unknown",
+      "label": "Mediterranean California Alpine Dry Tundra"
+    },
+    "505": {
+      "class": "alpine_tundra",
+      "label": "Mediterranean California Alpine Fell-Field"
+    },
+    "506": {
+      "class": "alpine_tundra",
+      "label": "North Pacific Dry and Mesic Alpine Dwarf-Shrubland, Fell-field and Meadow"
+    },
+    "507": {
+      "class": "alpine_tundra",
+      "label": "Rocky Mountain Alpine Tundra/Fell-field/Dwarf-shrub Map Unit"
+    },
+    "508": {
+      "class": "wetland",
+      "label": "Temperate Pacific Intertidal Mudflat"
+    },
+    "509": {
+      "class": "water",
+      "label": "Mediterranean California Eelgrass Bed"
+    },
+    "510": {
+      "class": "water",
+      "label": "North Pacific Maritime Eelgrass Bed"
+    },
+    "511": {
+      "class": "riparian_forest",
+      "label": "South-Central Interior Large Floodplain - Herbaceous Modifier"
+    },
+    "512": {
+      "class": "riparian_forest",
+      "label": "East Gulf Coastal Plain Large River Floodplain Forest - Herbaceous Modifier"
+    },
+    "513": {
+      "class": "water",
+      "label": "Temperate Pacific Freshwater Aquatic Bed"
+    },
+    "514": {
+      "class": "cliff_rock",
+      "label": "Central California Coast Ranges Cliff and Canyon"
+    },
+    "515": {
+      "class": "barren",
+      "label": "Mediterranean California Serpentine Barrens"
+    },
+    "516": {
+      "class": "cliff_rock",
+      "label": "Southern California Coast Ranges Cliff and Canyon"
+    },
+    "517": {
+      "class": "cliff_rock",
+      "label": "Central Interior Acidic Cliff and Talus"
+    },
+    "518": {
+      "class": "cliff_rock",
+      "label": "Central Interior Calcareous Cliff and Talus"
+    },
+    "519": {
+      "class": "cliff_rock",
+      "label": "Great Lakes Acidic Rocky Shore and Cliff"
+    },
+    "520": {
+      "class": "cliff_rock",
+      "label": "Great Lakes Alkaline Rocky Shore and Cliff"
+    },
+    "521": {
+      "class": "cliff_rock",
+      "label": "North-Central Appalachian Acidic Cliff and Talus"
+    },
+    "522": {
+      "class": "cliff_rock",
+      "label": "North-Central Appalachian Alkaline Cliff and Talus"
+    },
+    "523": {
+      "class": "cliff_rock",
+      "label": "Southern Appalachian Granitic Cliff and Talus"
+    },
+    "524": {
+      "class": "cliff_rock",
+      "label": "Southern Interior Acid Cliff"
+    },
+    "525": {
+      "class": "cliff_rock",
+      "label": "Klamath-Siskiyou Cliff and Outcrop"
+    },
+    "526": {
+      "class": "cliff_rock",
+      "label": "North Pacific Montane Massive Bedrock, Cliff, and Talus"
+    },
+    "527": {
+      "class": "barren",
+      "label": "North Pacific Serpentine Barren"
+    },
+    "528": {
+      "class": "cliff_rock",
+      "label": "Northern Rocky Mountain Cliff, Canyon and Massive Bedrock"
+    },
+    "529": {
+      "class": "cliff_rock",
+      "label": "Rocky Mountain Cliff, Canyon and Massive Bedrock"
+    },
+    "530": {
+      "class": "cliff_rock",
+      "label": "Southern Rocky Mountain Cliff, Canyon and Massive Bedrock"
+    },
+    "531": {
+      "class": "cliff_rock",
+      "label": "Western Great Plains Cliff and Outcrop"
+    },
+    "532": {
+      "class": "cliff_rock",
+      "label": "North American Warm Desert Bedrock Cliff and Outcrop"
+    },
+    "533": {
+      "class": "barren",
+      "label": "North American Warm Desert Volcanic Rockland"
+    },
+    "534": {
+      "class": "desert_scrub",
+      "label": "North American Warm Desert Pavement"
+    },
+    "535": {
+      "class": "grassland",
+      "label": "Introduced Upland Vegetation - Annual Grassland"
+    },
+    "536": {
+      "class": "grassland",
+      "label": "Introduced Upland Vegetation - Perennial Grassland and Forbland"
+    },
+    "537": {
+      "class": "introduced_vegetation",
+      "label": "Introduced Upland Vegetation - Annual and Biennial Forbland"
+    },
+    "538": {
+      "class": "introduced_vegetation",
+      "label": "Introduced Upland Vegetation - Shrub"
+    },
+    "539": {
+      "class": "introduced_vegetation",
+      "label": "Introduced Upland Vegetation - Treed"
+    },
+    "540": {
+      "class": "wetland",
+      "label": "Introduced Riparian and Wetland Vegetation"
+    },
+    "541": {
+      "class": "wetland",
+      "label": "Introduced Wetland Vegetation - Phragmites"
+    },
+    "542": {
+      "class": "agriculture_pasture",
+      "label": "Pasture/Hay"
+    },
+    "543": {
+      "class": "agriculture_cropland",
+      "label": "Cultivated Cropland"
+    },
+    "544": {
+      "class": "developed_low",
+      "label": "Developed, Open Space"
+    },
+    "545": {
+      "class": "developed_low",
+      "label": "Developed, Low Intensity"
+    },
+    "546": {
+      "class": "developed_medium",
+      "label": "Developed, Medium Intensity"
+    },
+    "547": {
+      "class": "developed_high",
+      "label": "Developed, High Intensity"
+    },
+    "548": {
+      "class": "water",
+      "label": "Open Water (Fresh)"
+    },
+    "549": {
+      "class": "water",
+      "label": "Open Water (Brackish/Salt)"
+    },
+    "550": {
+      "class": "developed_industrial",
+      "label": "Quarries, Mines, Gravel Pits and Oil Wells"
+    },
+    "551": {
+      "class": "disturbed",
+      "label": "Harvested Forest-Shrub Regeneration"
+    },
+    "552": {
+      "class": "grassland",
+      "label": "Harvested Forest-Grass Regeneration"
+    },
+    "553": {
+      "class": "disturbed",
+      "label": "Harvested Forest - Northwestern Regeneration"
+    },
+    "554": {
+      "class": "disturbed",
+      "label": "Recently Logged - Northern Forest"
+    },
+    "555": {
+      "class": "disturbed",
+      "label": "Recently Logged - priorass. no data"
+    },
+    "556": {
+      "class": "disturbed",
+      "label": "Recently Burned - prior assoc no data"
+    },
+    "557": {
+      "class": "disturbed",
+      "label": "Recently Burned Forest"
+    },
+    "558": {
+      "class": "grassland",
+      "label": "Recently Burned Grassland"
+    },
+    "559": {
+      "class": "disturbed",
+      "label": "Disturbed, Non-specific"
+    },
+    "560": {
+      "class": "wetland",
+      "label": "North American Warm Desert Cienega"
+    },
+    "561": {
+      "class": "barren",
+      "label": "Rocky Mountain Alpine/Montane Sparsely Vegetated Systems"
+    },
+    "562": {
+      "class": "barren",
+      "label": "Western Great Plains Sparsely Vegetated Systems"
+    },
+    "563": {
+      "class": "barren",
+      "label": "Mediterranean California Sparsely Vegetated Systems"
+    },
+    "564": {
+      "class": "barren",
+      "label": "North Pacific Sparsely Vegetated Systems"
+    },
+    "565": {
+      "class": "barren",
+      "label": "North American Warm Desert Sparsely Vegetated Systems"
+    },
+    "566": {
+      "class": "barren",
+      "label": "Inter-Mountain Basins Sparsely Vegetated Systems"
+    },
+    "567": {
+      "class": "cliff_rock",
+      "label": "North Pacific Alpine and Subalpine Bedrock and Scree"
+    },
+    "568": {
+      "class": "cliff_rock",
+      "label": "Rocky Mountain Alpine Bedrock and Scree"
+    },
+    "569": {
+      "class": "disturbed",
+      "label": "Recently Disturbed or Modified"
+    },
+    "570": {
+      "class": "water",
+      "label": "Open Water"
+    },
+    "571": {
+      "class": "barren",
+      "label": "Barren"
+    },
+    "572": {
+      "class": "developed_industrial",
+      "label": "Quarries - Strip Mines - Gravel Pits"
+    },
+    "573": {
+      "class": "developed_low",
+      "label": "Developed - Open Space"
+    },
+    "574": {
+      "class": "developed_low",
+      "label": "Developed - Low Intensity"
+    },
+    "575": {
+      "class": "developed_medium",
+      "label": "Developed - Medium Intensity"
+    },
+    "576": {
+      "class": "developed_high",
+      "label": "Developed - High Intensity"
+    },
+    "577": {
+      "class": "agriculture_pasture",
+      "label": "Agriculture - Pasture/Hay"
+    },
+    "578": {
+      "class": "agriculture_cropland",
+      "label": "Agriculture - Cultivated Crops"
+    },
+    "579": {
+      "class": "agriculture_pasture",
+      "label": "Agriculture - Pasture and Hay"
+    },
+    "580": {
+      "class": "agriculture_cropland",
+      "label": "Agriculture - Cultivated Crops and Pasture"
+    },
+    "581": {
+      "class": "introduced_vegetation",
+      "label": "Introduced Vegetation"
+    },
+    "582": {
+      "class": "disturbed",
+      "label": "Recently Disturbed"
+    },
+    "583": {
+      "class": "ice_snow",
+      "label": "Perennial Ice/Snow"
+    },
+    "584": {
+      "class": "unmapped",
+      "label": "Undetermined"
+    }
+  },
+  "default": {
+    "class": "unknown",
+    "label": "Unmapped or unrecognized LANDFIRE code"
+  }
+}

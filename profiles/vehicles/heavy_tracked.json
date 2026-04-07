@@ -1,0 +1,86 @@
+{
+  "vehicle_id": "heavy_tracked",
+  "vehicle_name": "Heavy Tracked",
+  "description": "Heavy tracked vehicle (e.g., M1 Abrams). Lower top speed but superior off-road capability. Better on soft soil, steeper slopes.",
+  "max_speed_mph": 42,
+  "factors": {
+    "F1": {
+      "type": "continuous",
+      "normalization": "inverse_linear",
+      "min": 0,
+      "max": 4500,
+      "description": "Elevation penalty similar to wheeled but less impactful"
+    },
+    "F2": {
+      "type": "continuous",
+      "normalization": "inverse_linear",
+      "min": 0,
+      "max": 45,
+      "impassable_above": 60,
+      "description": "Tracked vehicles handle steeper grades; impassable above 60 deg"
+    },
+    "F3": {
+      "type": "categorical",
+      "schema_ref": "Any LANDFIRE-compatible factor schema",
+      "terrain_mobility": {
+        "grassland": 1.0,
+        "agriculture_pasture": 0.9,
+        "agriculture_cropland": 0.75,
+        "developed_low": 0.85,
+        "developed_medium": 0.55,
+        "developed_high": 0.35,
+        "developed_industrial": 0.25,
+        "open_woodland": 0.75,
+        "pinyon_juniper_woodland": 0.65,
+        "open_coniferous_forest": 0.55,
+        "open_deciduous_forest": 0.55,
+        "dense_coniferous_forest": 0.35,
+        "dense_deciduous_forest": 0.4,
+        "managed_forest": 0.55,
+        "shrubland": 0.7,
+        "semi_desert_shrub": 0.8,
+        "chaparral": 0.35,
+        "coastal_scrub": 0.6,
+        "desert_scrub": 0.7,
+        "alpine_tundra": 0.55,
+        "riparian_forest": 0.4,
+        "swamp": 0.15,
+        "wetland": 0.2,
+        "marsh": 0.1,
+        "wet_flatwoods": 0.35,
+        "coastal_dune": 0.5,
+        "beach": 0.4,
+        "barren": 0.75,
+        "cliff_rock": 0.0,
+        "water": 0.0,
+        "ice_snow": 0.0,
+        "introduced_vegetation": 0.65,
+        "disturbed": 0.55,
+        "unmapped": 0.4,
+        "unknown": 0.4
+      }
+    },
+    "F4": {
+      "type": "categorical",
+      "schema_ref": "Any USCS-compatible factor schema",
+      "terrain_mobility": {
+        "GW": 1.0,
+        "GP": 1.0,
+        "GM": 0.95,
+        "GC": 0.95,
+        "SW": 0.9,
+        "SP": 0.85,
+        "SM": 0.7,
+        "SC": 0.7,
+        "ML": 0.65,
+        "CL": 0.7,
+        "OL": 0.45,
+        "MH": 0.5,
+        "CH": 0.55,
+        "OH": 0.4,
+        "PT": 0.2,
+        "unknown": 0.5
+      }
+    }
+  }
+}

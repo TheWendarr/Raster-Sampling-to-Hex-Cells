@@ -1,0 +1,86 @@
+{
+  "vehicle_id": "light_wheeled",
+  "vehicle_name": "Light Wheeled",
+  "description": "Light wheeled vehicle (e.g., HMMWV). Good road speed, sensitive to soft soil and steep slopes.",
+  "max_speed_mph": 65,
+  "factors": {
+    "F1": {
+      "type": "continuous",
+      "normalization": "inverse_linear",
+      "min": 0,
+      "max": 4500,
+      "description": "Higher elevation = slightly reduced mobility (thinner air, rougher terrain)"
+    },
+    "F2": {
+      "type": "continuous",
+      "normalization": "inverse_linear",
+      "min": 0,
+      "max": 35,
+      "impassable_above": 40,
+      "description": "Slopes above 40 deg impassable; 0 deg = full mobility"
+    },
+    "F3": {
+      "type": "categorical",
+      "schema_ref": "Any LANDFIRE-compatible factor schema",
+      "terrain_mobility": {
+        "grassland": 1.0,
+        "agriculture_pasture": 0.95,
+        "agriculture_cropland": 0.8,
+        "developed_low": 0.95,
+        "developed_medium": 0.7,
+        "developed_high": 0.5,
+        "developed_industrial": 0.3,
+        "open_woodland": 0.7,
+        "pinyon_juniper_woodland": 0.55,
+        "open_coniferous_forest": 0.45,
+        "open_deciduous_forest": 0.45,
+        "dense_coniferous_forest": 0.25,
+        "dense_deciduous_forest": 0.3,
+        "managed_forest": 0.5,
+        "shrubland": 0.6,
+        "semi_desert_shrub": 0.75,
+        "chaparral": 0.25,
+        "coastal_scrub": 0.55,
+        "desert_scrub": 0.65,
+        "alpine_tundra": 0.5,
+        "riparian_forest": 0.3,
+        "swamp": 0.05,
+        "wetland": 0.1,
+        "marsh": 0.05,
+        "wet_flatwoods": 0.25,
+        "coastal_dune": 0.35,
+        "beach": 0.25,
+        "barren": 0.7,
+        "cliff_rock": 0.0,
+        "water": 0.0,
+        "ice_snow": 0.0,
+        "introduced_vegetation": 0.6,
+        "disturbed": 0.5,
+        "unmapped": 0.4,
+        "unknown": 0.4
+      }
+    },
+    "F4": {
+      "type": "categorical",
+      "schema_ref": "Any USCS-compatible factor schema",
+      "terrain_mobility": {
+        "GW": 1.0,
+        "GP": 0.95,
+        "GM": 0.9,
+        "GC": 0.9,
+        "SW": 0.8,
+        "SP": 0.75,
+        "SM": 0.55,
+        "SC": 0.55,
+        "ML": 0.5,
+        "CL": 0.55,
+        "OL": 0.35,
+        "MH": 0.35,
+        "CH": 0.4,
+        "OH": 0.3,
+        "PT": 0.1,
+        "unknown": 0.4
+      }
+    }
+  }
+}

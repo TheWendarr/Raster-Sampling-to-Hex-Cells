@@ -1,0 +1,154 @@
+{
+  "schema_id": "USCS",
+  "schema_name": "Unified Soil Classification System",
+  "factor": 4,
+  "factor_name": "Soil",
+  "region": "Global",
+  "source": "ASTM D2487 / MIL-STD-619B",
+  "description": "Standard USCS soil classification. Maps soil type codes to terrain mobility groups for vehicle traversal analysis.",
+  "code_type": "string",
+  "terrain_classes": {
+    "GW": "Well-graded gravels. Excellent bearing capacity in all conditions.",
+    "GP": "Poorly-graded gravels. Very good bearing, slight drainage concern.",
+    "GM": "Silty gravels. Good bearing, moderate moisture sensitivity.",
+    "GC": "Clayey gravels. Good bearing, some plasticity when wet.",
+    "SW": "Well-graded sands. Good bearing, slight softening when wet.",
+    "SP": "Poorly-graded sands. Moderate bearing, can be loose.",
+    "SM": "Silty sands. Moderate bearing, significant moisture sensitivity.",
+    "SC": "Clayey sands. Moderate bearing, plastic when wet.",
+    "ML": "Low-plasticity silts. Poor bearing when wet, moderate when dry.",
+    "CL": "Lean clays. Moderate bearing dry, poor when saturated.",
+    "OL": "Organic silts/clays (low plasticity). Poor bearing.",
+    "MH": "Elastic silts. Poor bearing, highly compressible.",
+    "CH": "Fat clays. Moderate dry, very poor when wet. Sticky.",
+    "OH": "Organic clays/silts (high plasticity). Very poor bearing.",
+    "PT": "Peat. Extremely poor bearing. Often impassable."
+  },
+  "lookup": {
+    "GW": {
+      "class": "GW",
+      "label": "Well-graded Gravel",
+      "group": "coarse_gravel"
+    },
+    "GP": {
+      "class": "GP",
+      "label": "Poorly-graded Gravel",
+      "group": "coarse_gravel"
+    },
+    "GM": {
+      "class": "GM",
+      "label": "Silty Gravel",
+      "group": "coarse_gravel"
+    },
+    "GC": {
+      "class": "GC",
+      "label": "Clayey Gravel",
+      "group": "coarse_gravel"
+    },
+    "GW-GM": {
+      "class": "GW",
+      "label": "Well-graded Gravel with Silt",
+      "group": "coarse_gravel"
+    },
+    "GW-GC": {
+      "class": "GW",
+      "label": "Well-graded Gravel with Clay",
+      "group": "coarse_gravel"
+    },
+    "GP-GM": {
+      "class": "GP",
+      "label": "Poorly-graded Gravel with Silt",
+      "group": "coarse_gravel"
+    },
+    "GP-GC": {
+      "class": "GP",
+      "label": "Poorly-graded Gravel with Clay",
+      "group": "coarse_gravel"
+    },
+    "SW": {
+      "class": "SW",
+      "label": "Well-graded Sand",
+      "group": "coarse_sand"
+    },
+    "SP": {
+      "class": "SP",
+      "label": "Poorly-graded Sand",
+      "group": "coarse_sand"
+    },
+    "SM": {
+      "class": "SM",
+      "label": "Silty Sand",
+      "group": "coarse_sand"
+    },
+    "SC": {
+      "class": "SC",
+      "label": "Clayey Sand",
+      "group": "coarse_sand"
+    },
+    "SW-SM": {
+      "class": "SW",
+      "label": "Well-graded Sand with Silt",
+      "group": "coarse_sand"
+    },
+    "SW-SC": {
+      "class": "SW",
+      "label": "Well-graded Sand with Clay",
+      "group": "coarse_sand"
+    },
+    "SP-SM": {
+      "class": "SP",
+      "label": "Poorly-graded Sand with Silt",
+      "group": "coarse_sand"
+    },
+    "SP-SC": {
+      "class": "SP",
+      "label": "Poorly-graded Sand with Clay",
+      "group": "coarse_sand"
+    },
+    "ML": {
+      "class": "ML",
+      "label": "Silt (Low Plasticity)",
+      "group": "fine_silt"
+    },
+    "CL": {
+      "class": "CL",
+      "label": "Lean Clay",
+      "group": "fine_clay"
+    },
+    "CL-ML": {
+      "class": "CL",
+      "label": "Silty Clay",
+      "group": "fine_clay"
+    },
+    "OL": {
+      "class": "OL",
+      "label": "Organic Silt/Clay (Low Plasticity)",
+      "group": "fine_organic"
+    },
+    "MH": {
+      "class": "MH",
+      "label": "Elastic Silt",
+      "group": "fine_silt"
+    },
+    "CH": {
+      "class": "CH",
+      "label": "Fat Clay",
+      "group": "fine_clay"
+    },
+    "OH": {
+      "class": "OH",
+      "label": "Organic Clay/Silt (High Plasticity)",
+      "group": "fine_organic"
+    },
+    "PT": {
+      "class": "PT",
+      "label": "Peat",
+      "group": "highly_organic"
+    }
+  },
+  "default": {
+    "class": "CL",
+    "label": "Unknown (defaulting to Lean Clay)",
+    "group": "fine_clay"
+  }
+}
