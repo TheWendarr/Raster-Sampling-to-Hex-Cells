@@ -93,9 +93,7 @@ except ImportError:
     _HAS_PYOGRIO = False
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Constants
-# ═══════════════════════════════════════════════════════════════════════════
 
 META_TABLE = "__hex_surface_meta__"
 LOG_TABLE = "__hex_surface_log__"

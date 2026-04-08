@@ -53,7 +53,6 @@ Dependencies
     Fallback: scipy (for labeled_comprehension)
 """
 
-from __future__ import annotations
 
 import datetime
 import os
@@ -166,7 +165,7 @@ class RasterBinEnricher:
         self.gdf["meta_processed_at"] = datetime.datetime.now().isoformat()
         self.gdf[f"meta_source_{raster_name}"] = raster_path
 
-    # ── exactextract engine (fastest) ────────────────────────────────────
+    # exactextract engine (fastest)
 
     def _process_exactextract(
         self,
@@ -257,7 +256,7 @@ class RasterBinEnricher:
         print(f"  [TIME] exactextract call: {time.perf_counter() - t_extract:.3f}s")
         print(f"  [OK] {output_col} (exactextract)")
 
-    # ── Batch rasterize engine (fallback — still fast) ───────────────────
+    # Batch rasterize engine (fallback — still fast)
 
     def _process_batch_rasterize(
         self,
@@ -375,7 +374,7 @@ class RasterBinEnricher:
               f"({len(unique_zones)} zones)")
         print(f"  [OK] {output_col} (batch rasterize)")
 
-    # ── Shared helpers ───────────────────────────────────────────────────
+    # Shared helpers
 
     @staticmethod
     def _calculate_mean(pixels: np.ndarray) -> float:

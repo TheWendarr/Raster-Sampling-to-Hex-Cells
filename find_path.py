@@ -124,7 +124,7 @@ class VehicleProfile:
     name: str = "Generic"
     max_speed_ms: float = DEFAULT_MAX_SPEED_MS
 
-    # ── Factor normalization hooks (stubbed) ─────────────────────────
+    # Factor normalization hooks (stubbed)
     # Each would be a callable: raw_value -> normalized 0.0-1.0
     # For now, normalization is computed from the data range.
 
@@ -731,7 +731,7 @@ def find_path(
     resolutions = sorted(lod_map.keys())
     print(f"Available LODs: {resolutions} (coarsest: {resolutions[0]}, finest: {resolutions[-1]})")
 
-    # ── Normalize factors for all LODs ───────────────────────────────────
+    # Normalize factors for all LODs
     if engine:
         print(f"Normalizing factors via {engine.vehicle.vehicle_name} profile...")
     else:
@@ -740,14 +740,14 @@ def find_path(
         normalize_factors(lod_map[res], vehicle, engine=engine)
         print(f"  LOD_{res:02d}: {len(lod_map[res].cell_set)} traversable cells")
 
-    # ── Resolve start/end points ─────────────────────────────────────────
+    # Resolve start/end points
     coarsest = lod_map[resolutions[0]]
 
     start_id, end_id = _resolve_endpoints(start, end, coarsest)
     print(f"Start: {start_id}")
     print(f"End:   {end_id}")
 
-    # ── Phase 1: Coarse pathfinding ──────────────────────────────────────
+    # Phase 1: Coarse pathfinding
     print(f"\nPhase 1: Pathfinding at LOD_{resolutions[0]:02d} "
           f"(resolution {resolutions[0]})...")
     t_phase1 = time.perf_counter()
@@ -762,7 +762,7 @@ def find_path(
 
     print(f"  Found path: {len(path)} cells ({time.perf_counter() - t_phase1:.2f}s)")
 
-    # ── Phase 2+: Hierarchical refinement ────────────────────────────────
+    # Phase 2+: Hierarchical refinement
     current_res = resolutions[0]
 
     for finer_res in resolutions[1:]:
@@ -781,7 +781,7 @@ def find_path(
             print(f"  No refinement possible at resolution {finer_res} "
                   f"(no child data overlaps path)")
 
-    # ── Compute path statistics ──────────────────────────────────────────
+    # Compute path statistics
     total_dist = 0.0
     total_time = 0.0
 
@@ -1144,7 +1144,7 @@ def main(argv: List[str] | None = None) -> int:
         max_speed_ms=args.max_speed,
     )
 
-    # ── Build ProfileEngine if schemas/vehicle are provided ──────────
+    # Build ProfileEngine if schemas/vehicle are provided
     engine = None
     if args.vehicle or args.factor_schema:
         schema_paths = args.factor_schema or []
