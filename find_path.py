@@ -67,6 +67,7 @@ Requires:
 import argparse
 import heapq
 import math
+import shutil
 import sys
 import time
 from dataclasses import dataclass, field
@@ -88,6 +89,15 @@ try:
 except ImportError:
     pyogrio = None
     _HAS_PYOGRIO = False
+
+
+def _require_pyogrio() -> None:
+    """Raise early if pyogrio is not available (needed for FGDB output)."""
+    if not _HAS_PYOGRIO:
+        raise RuntimeError(
+            "pyogrio is required for FGDB output. "
+            "Install with: pip install pyogrio"
+        )
 
 
 # Constants
@@ -1008,6 +1018,12 @@ def export_path(
                 "Specify a different output GDB."
             )
 
+        # Remove existing output GDB so layers from a previous run
+        # don't block the write (OpenFileGDB can't overwrite a layer
+        # in-place — it must be recreated).
+        if output_path.exists():
+            shutil.rmtree(output_path)
+
         pyogrio.write_dataframe(
             line_gdf, str(output_path),
             layer=line_layer, driver="OpenFileGDB",
@@ -1015,6 +1031,7 @@ def export_path(
         pyogrio.write_dataframe(
             points_gdf, str(output_path),
             layer=points_layer, driver="OpenFileGDB",
+            append=True,
         )
         print(f"Exported to {output_path.name}:")
         print(f"  Line layer:   {line_layer}")
